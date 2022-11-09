@@ -1,3 +1,6 @@
+use pecker::screen::Screen;
+
 fn main() {
-    println!("Hello, world!");
+    let screen = Screen::new();
+    screen.hello();
 }
