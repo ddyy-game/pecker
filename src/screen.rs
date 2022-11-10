@@ -1,14 +1,29 @@
-use std::io::{stdout, Stdout};
+use std::io::{stdout, Stdout, Write};
 
-pub struct Screen {
+use crossterm::{cursor, queue, style::Print, Result};
+
+pub struct MainScreen {
     stdout: Stdout,
 }
 
-impl Screen {
+impl MainScreen {
     pub fn new() -> Self {
-        Screen { stdout: stdout() }
+        MainScreen { stdout: stdout() }
     }
-    pub fn hello(&self) {
-        println!("hello, world");
+
+    pub fn put_str(&mut self, s: &str, row: u16) -> Result<()> {
+        queue!(
+            self.stdout,
+            cursor::MoveTo(
+                (s.len() / 2).try_into().expect("string length too long"),
+                row,
+            ),
+            Print(s)
+        )?;
+        Ok(())
+    }
+
+    pub fn flush(&mut self) -> Result<()> {
+        self.stdout.flush()
     }
 }
