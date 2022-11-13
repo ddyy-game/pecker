@@ -1,6 +1,11 @@
 use std::io::{stdout, Stdout, Write};
 
-use crossterm::{cursor, queue, style::Print, Result};
+use crossterm::{
+    cursor, execute, queue,
+    style::Print,
+    terminal::{Clear, ClearType},
+    Result,
+};
 
 pub struct MainScreen {
     stdout: Stdout,
@@ -9,6 +14,11 @@ pub struct MainScreen {
 impl MainScreen {
     pub fn new() -> Self {
         MainScreen { stdout: stdout() }
+    }
+
+    pub fn clear(&mut self) -> Result<()> {
+        execute!(self.stdout, Clear(ClearType::All))?;
+        Ok(())
     }
 
     pub fn put_str(&mut self, s: &str, row: u16) -> Result<()> {
