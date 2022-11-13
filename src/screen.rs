@@ -23,9 +23,9 @@ impl MainScreen {
         }
     }
 
-    pub fn set_size(&mut self, width: u16, height: u16) {
-        self.width = width;
-        self.height = height;
+    pub fn reset(&mut self) -> Result<()> {
+        self.clear()?;
+        Ok(())
     }
 
     pub fn clear(&mut self) -> Result<()> {
@@ -33,19 +33,30 @@ impl MainScreen {
         Ok(())
     }
 
-    pub fn put_str_centered(&mut self, s: &str, row: i8) -> Result<()> {
+    pub fn set_size(&mut self, width: u16, height: u16) {
+        self.width = width;
+        self.height = height;
+    }
+
+    pub fn put_str_centered(&mut self, s: &str, row: i16) -> Result<()> {
         let len: u16 = s.len().try_into().expect("string length too long");
         let c = (self.width - len) / 2;
-        let r = if row >= 0 {
-            row as u16
-        } else {
-            self.height - (-row as u16)
-        };
+        let r = self.wrap_row(row);
         queue!(self.stdout, cursor::MoveTo(c, r), Print(s))?;
         Ok(())
     }
 
     pub fn flush(&mut self) -> Result<()> {
         self.stdout.flush()
+    }
+
+    fn wrap_row(&self, row: i16) -> u16 {
+        if row >= 0 {
+            row as u16
+        } else if self.height >= (-row as u16) {
+            self.height - (-row as u16)
+        } else {
+            0u16
+        }
     }
 }
