@@ -18,8 +18,8 @@ impl MainScreen {
         let (width, height) = size().expect("cannot determine terminal size");
         MainScreen {
             stdout: stdout(),
-            height,
             width,
+            height,
         }
     }
 
@@ -58,5 +58,11 @@ impl MainScreen {
         } else {
             0u16
         }
+    }
+}
+
+impl Default for MainScreen {
+    fn default() -> Self {
+        Self::new()
     }
 }

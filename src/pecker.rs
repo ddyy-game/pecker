@@ -52,3 +52,9 @@ impl Pecker {
         Ok(())
     }
 }
+
+impl Default for Pecker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
