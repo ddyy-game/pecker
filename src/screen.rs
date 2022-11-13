@@ -33,13 +33,15 @@ impl MainScreen {
         Ok(())
     }
 
-    pub fn put_str_centered(&mut self, s: &str, row: u16) -> Result<()> {
+    pub fn put_str_centered(&mut self, s: &str, row: i8) -> Result<()> {
         let len: u16 = s.len().try_into().expect("string length too long");
-        queue!(
-            self.stdout,
-            cursor::MoveTo((self.width - len) / 2, row),
-            Print(s)
-        )?;
+        let c = (self.width - len) / 2;
+        let r = if row >= 0 {
+            row as u16
+        } else {
+            self.height - (-row as u16)
+        };
+        queue!(self.stdout, cursor::MoveTo(c, r), Print(s))?;
         Ok(())
     }
 

@@ -33,14 +33,14 @@ impl Pecker {
                         break;
                     }
                     self.screen.clear()?;
-                    self.screen.put_str_centered(&format!("{:?}", event), 2)?;
+                    self.screen.put_str_centered(&format!("{:?}", event), 4)?;
                     self.screen.flush()?;
                 }
                 Event::Resize(width, height) => {
                     self.screen.set_size(width, height);
                     self.screen.clear()?;
                     self.screen
-                        .put_str_centered(&format!("resize: {}x{}", width, height), 4)?;
+                        .put_str_centered(&format!("resize: {}x{}", width, height), -4)?;
                     self.screen.flush()?;
                 }
                 Event::FocusGained => (),
