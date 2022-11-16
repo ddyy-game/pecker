@@ -19,7 +19,7 @@ impl Pecker {
 
     pub fn reset(&mut self) -> Result<()> {
         enable_raw_mode()?;
-        self.screen.reset()?;
+        self.screen.clear()?;
         Ok(())
     }
 
@@ -38,7 +38,7 @@ impl Pecker {
                 }
                 Event::Resize(width, height) => {
                     self.screen.set_size(width, height);
-                    self.screen.reset()?;
+                    self.screen.clear()?;
                     self.screen
                         .put_str_centered(&format!("resize: {}x{}", width, height), -4)?;
                     self.screen.flush()?;

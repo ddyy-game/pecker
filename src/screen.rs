@@ -23,11 +23,6 @@ impl MainScreen {
         }
     }
 
-    pub fn reset(&mut self) -> Result<()> {
-        self.clear()?;
-        Ok(())
-    }
-
     pub fn clear(&mut self) -> Result<()> {
         execute!(self.stdout, Clear(ClearType::All), cursor::MoveTo(0, 0))?;
         Ok(())
