@@ -1,10 +1,9 @@
-use std::io::{stdout, Stdout, Write};
+use std::io::{stdout, Result, Stdout, Write};
 
 use crossterm::{
     cursor, execute, queue,
     style::Print,
     terminal::{size, Clear, ClearType},
-    Result,
 };
 
 pub struct MainScreen {

@@ -1,7 +1,8 @@
+use std::io::Result;
+
 use crossterm::{
     event::{read, Event, KeyCode, KeyModifiers},
     terminal::enable_raw_mode,
-    Result,
 };
 
 use crate::screen::MainScreen;
