@@ -2,14 +2,14 @@ use std::io::{stdout, Result, Stdout, Write};
 
 use crossterm::{
     cursor, execute, queue,
-    style::Print,
+    style::{Color, Print, SetForegroundColor},
     terminal::{size, Clear, ClearType},
 };
 
 pub struct MainScreen {
     stdout: Stdout,
-    width: u16,
-    height: u16,
+    pub width: u16,
+    pub height: u16,
 }
 
 impl MainScreen {
@@ -32,6 +32,22 @@ impl MainScreen {
         self.height = height;
     }
 
+    pub fn move_to(&mut self, column: u16, row: u16) -> Result<()> {
+        queue!(self.stdout, cursor::MoveTo(column, row))
+    }
+
+    pub fn set_color(&mut self, color: Color) -> Result<()> {
+        queue!(self.stdout, SetForegroundColor(color))
+    }
+
+    pub fn put_str(&mut self, s: &str) -> Result<()> {
+        queue!(self.stdout, Print(s))
+    }
+
+    pub fn set_char(&mut self, c: char) -> Result<()> {
+        queue!(self.stdout, Print(c), cursor::MoveLeft(1))
+    }
+
     pub fn put_str_centered(&mut self, s: &str, row: i16) -> Result<()> {
         let len: u16 = s.len().try_into().expect("string length too long");
         let c = (self.width - len) / 2;
@@ -45,7 +61,9 @@ impl MainScreen {
     }
 
     fn wrap_row(&self, row: i16) -> u16 {
-        if row >= 0 {
+        if row > 0 && row as u16 >= self.height {
+            self.height
+        } else if row >= 0 {
             row as u16
         } else if self.height >= (-row as u16) {
             self.height - (-row as u16)
