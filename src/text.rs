@@ -5,11 +5,11 @@ use crate::screen::MainScreen;
 pub struct TextLines {
     raw_text: Vec<u8>,
     lines: Vec<Vec<u8>>,
-    text_pos: usize,
+    n_hit: usize,
     pub cursor_pos: (u16, u16),
     screen_height: u16,
     screen_width: u16,
-    mismatches: usize,
+    n_miss: usize,
 }
 
 #[derive(PartialEq, Eq)]
@@ -23,16 +23,17 @@ pub enum Action {
 impl TextLines {
     pub fn new(text: &str, width: u16, height: u16) -> TextLines {
         let mut raw_text: Vec<u8> = text.bytes().collect();
-        let lines = wrap_string(&raw_text, width);
+        let text_width = (width - 8).min(((raw_text.len() as f32).sqrt().ceil() + 15.0) as u16);
+        let lines = wrap_string(&raw_text, text_width);
         raw_text.push(b' ');
         TextLines {
             raw_text,
             lines,
-            text_pos: 0,
+            n_hit: 0,
             cursor_pos: (0, 0),
             screen_width: width,
             screen_height: height,
-            mismatches: 0,
+            n_miss: 0,
         }
     }
 
@@ -43,7 +44,7 @@ impl TextLines {
         self.screen_width = width;
         self.screen_height = height;
         self.lines = wrap_string(&self.raw_text, width);
-        let mut n = self.text_pos + self.mismatches;
+        let mut n = self.n_hit + self.n_miss;
         let mut pos = (0u16, 0u16);
         while n >= self.lines[pos.1 as usize].len() {
             n -= self.lines[pos.1 as usize].len();
@@ -55,27 +56,31 @@ impl TextLines {
     }
 
     pub fn current(&self) -> u8 {
-        self.raw_text[self.text_pos + self.mismatches]
+        self.raw_text[self.n_hit + self.n_miss]
     }
 
     pub fn forward(&mut self, c: u8) -> Action {
         let pos = &mut self.cursor_pos;
+
+        // if cursor is already at the end
         if pos.1 as usize == self.lines.len() - 1
             && pos.0 as usize == self.lines[pos.1 as usize].len() - 1
         {
-            return if self.mismatches > 0 {
+            return if self.n_miss > 0 {
                 Action::Mismatch
             } else {
                 Action::End
             };
         }
 
-        if c == self.raw_text[self.text_pos] && self.mismatches == 0 {
-            self.text_pos += 1;
+        // check if matches
+        if c == self.raw_text[self.n_hit] && self.n_miss == 0 {
+            self.n_hit += 1;
         } else {
-            self.mismatches += 1
+            self.n_miss += 1
         }
 
+        // move cursor
         if pos.0 as usize == self.lines[pos.1 as usize].len() - 1 {
             pos.1 += 1;
             pos.0 = 0;
@@ -83,11 +88,12 @@ impl TextLines {
             pos.0 += 1
         }
 
+        // respond action to be taken after moving forward
         if pos.0 as usize == 0 {
             Action::Redraw
-        } else if self.mismatches > 0 {
+        } else if self.n_miss > 0 {
             Action::Mismatch
-        } else if self.text_pos == self.raw_text.len() - 1 {
+        } else if self.n_hit == self.raw_text.len() - 1 {
             Action::End
         } else {
             Action::Match
@@ -95,10 +101,10 @@ impl TextLines {
     }
 
     pub fn backward(&mut self) -> bool {
-        if self.mismatches == 0 {
+        if self.n_miss == 0 {
             return false;
         }
-        self.mismatches -= 1;
+        self.n_miss -= 1;
         let pos = &mut self.cursor_pos;
         if pos.0 as usize == 0 {
             pos.1 -= 1;
@@ -109,12 +115,32 @@ impl TextLines {
         return false;
     }
 
+    pub fn move_to_cursor(&mut self, screen: &mut MainScreen) -> Result<(u16, u16)> {
+        let (x, y) = self.move_to(screen, self.cursor_pos.0, self.cursor_pos.1)?;
+        screen.flush()?;
+        Ok((x, y))
+    }
+
+    pub fn move_to(
+        &mut self,
+        screen: &mut MainScreen,
+        column: u16,
+        row: u16,
+    ) -> Result<(u16, u16)> {
+        let offset_x = (self.screen_width - self.lines[row as usize].len() as u16) / 2;
+        let offset_y = (self.screen_height - self.lines.len() as u16) / 2;
+        screen.move_to(column + offset_x, row + offset_y)?;
+        Ok((column + offset_x, row + offset_y))
+    }
+
     pub fn redraw(&mut self, screen: &mut MainScreen) -> Result<()> {
         screen.clear()?;
-        let mut n_correct = self.text_pos;
-        let mut n_mistaken = self.mismatches;
-        for (i, line) in self.lines.iter().enumerate() {
-            screen.move_to(0, i as u16)?;
+        let mut n_correct = self.n_hit;
+        let mut n_mistaken = self.n_miss;
+
+        for i in 0..self.lines.len() {
+            self.move_to(screen, 0, i as u16)?;
+            let line = &self.lines[i];
             if n_correct > 0 {
                 screen.set_color(crossterm::style::Color::Green)?;
                 if line.len() <= n_correct {
@@ -154,7 +180,8 @@ impl TextLines {
                 n_mistaken = 0;
             }
         }
-        screen.move_to(self.cursor_pos.0, self.cursor_pos.1)?;
+
+        self.move_to_cursor(screen)?;
         screen.flush()?;
         Ok(())
     }

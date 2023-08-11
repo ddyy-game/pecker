@@ -49,9 +49,7 @@ impl Pecker {
                         if self.text_lines.backward() {
                             self.text_lines.redraw(&mut self.screen)?;
                         } else {
-                            let (x, y) = self.text_lines.cursor_pos;
-                            self.screen.move_to(x, y)?;
-                            self.screen.flush()?;
+                            self.text_lines.move_to_cursor(&mut self.screen)?;
                         }
                         continue;
                     }
@@ -65,6 +63,7 @@ impl Pecker {
                     if let Some(c) = c {
                         let current_char = self.text_lines.current();
                         let action = self.text_lines.forward(c as u8);
+
                         if action == Action::Mismatch {
                             self.screen.set_color(Color::Red)?;
                             self.screen.set_char(current_char as char)?;
@@ -72,13 +71,12 @@ impl Pecker {
                             self.screen.set_color(Color::Green)?;
                             self.screen.set_char(current_char as char)?;
                         }
-                        let (x, y) = self.text_lines.cursor_pos;
-                        self.screen.move_to(x, y)?;
-                        self.screen.flush()?;
+                        self.text_lines.move_to_cursor(&mut self.screen)?;
 
                         if action == Action::Redraw {
                             self.text_lines.redraw(&mut self.screen)?;
                         } else if action == Action::End {
+                            self.screen.clear()?;
                             break;
                         }
                     }
