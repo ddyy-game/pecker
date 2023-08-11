@@ -43,7 +43,9 @@ impl TextLines {
         }
         self.screen_width = width;
         self.screen_height = height;
-        self.lines = wrap_string(&self.raw_text, width);
+        let text_width =
+            (width - 8).min(((self.raw_text.len() as f32).sqrt().ceil() + 15.0) as u16);
+        self.lines = wrap_string(&self.raw_text, text_width);
         let mut n = self.n_hit + self.n_miss;
         let mut pos = (0u16, 0u16);
         while n >= self.lines[pos.1 as usize].len() {
@@ -55,17 +57,21 @@ impl TextLines {
         return true;
     }
 
+    #[inline]
     pub fn current(&self) -> u8 {
         self.raw_text[self.n_hit + self.n_miss]
     }
 
+    #[inline]
+    pub fn at_line_end(&self, column: u16, row: u16) -> bool {
+        column as usize == self.lines[row as usize].len() - 1
+    }
+
     pub fn forward(&mut self, c: u8) -> Action {
-        let pos = &mut self.cursor_pos;
+        let (x, y) = self.cursor_pos;
 
         // if cursor is already at the end
-        if pos.1 as usize == self.lines.len() - 1
-            && pos.0 as usize == self.lines[pos.1 as usize].len() - 1
-        {
+        if y as usize == self.lines.len() - 1 && self.at_line_end(x, y) {
             return if self.n_miss > 0 {
                 Action::Mismatch
             } else {
@@ -74,22 +80,24 @@ impl TextLines {
         }
 
         // check if matches
-        if c == self.raw_text[self.n_hit] && self.n_miss == 0 {
+        if self.n_miss == 0
+            && (c == self.raw_text[self.n_hit] || self.at_line_end(x, y) && c == b'\n')
+        {
             self.n_hit += 1;
         } else {
             self.n_miss += 1
         }
 
         // move cursor
-        if pos.0 as usize == self.lines[pos.1 as usize].len() - 1 {
-            pos.1 += 1;
-            pos.0 = 0;
+        if self.at_line_end(x, y) {
+            self.cursor_pos.1 += 1;
+            self.cursor_pos.0 = 0;
         } else {
-            pos.0 += 1
+            self.cursor_pos.0 += 1
         }
 
         // respond action to be taken after moving forward
-        if pos.0 as usize == 0 {
+        if self.cursor_pos.0 == 0 {
             Action::Redraw
         } else if self.n_miss > 0 {
             Action::Mismatch
