@@ -12,7 +12,6 @@ pub struct TextLines {
     n_miss: usize,
 }
 
-#[derive(PartialEq, Eq)]
 pub enum Action {
     Match,
     Mismatch,
@@ -54,7 +53,7 @@ impl TextLines {
         }
         pos.0 = n as u16;
         self.cursor_pos = pos;
-        return true;
+        true
     }
 
     #[inline]
@@ -120,7 +119,7 @@ impl TextLines {
             return true;
         }
         pos.0 -= 1;
-        return false;
+        false
     }
 
     pub fn move_to_cursor(&mut self, screen: &mut MainScreen) -> Result<(u16, u16)> {
@@ -207,8 +206,8 @@ fn wrap_string(text: &[u8], width: u16) -> Vec<Vec<u8>> {
         current_line.extend_from_slice(word);
         current_line.push(b' ');
     }
-    if current_line.len() > 0 {
+    if !current_line.is_empty() {
         lines.push(current_line);
     }
-    return lines;
+    lines
 }

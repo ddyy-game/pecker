@@ -63,7 +63,7 @@ impl Pecker {
                         let current_char = self.text_lines.current();
                         let action = self.text_lines.forward(c as u8);
 
-                        if action != Action::Mismatch {
+                        if !matches!(action, Action::Mismatch) {
                             self.screen.set_style(Style::Hit)?;
                             self.screen.set_char(current_char as char)?;
                         } else {
@@ -72,11 +72,13 @@ impl Pecker {
                         }
                         self.text_lines.move_to_cursor(&mut self.screen)?;
 
-                        if action == Action::Redraw {
-                            self.text_lines.redraw(&mut self.screen)?;
-                        } else if action == Action::End {
-                            self.screen.clear()?;
-                            break;
+                        match action {
+                            Action::Redraw => self.text_lines.redraw(&mut self.screen)?,
+                            Action::End => {
+                                self.screen.clear()?;
+                                break;
+                            }
+                            _ => {}
                         }
                     }
                 }
