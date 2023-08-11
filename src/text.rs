@@ -1,6 +1,6 @@
 use std::io::Result;
 
-use crate::screen::MainScreen;
+use crate::screen::{MainScreen, Style};
 
 pub struct TextLines {
     raw_text: Vec<u8>,
@@ -142,7 +142,7 @@ impl TextLines {
             self.move_to(screen, 0, i as u16)?;
             let line = &self.lines[i];
             if n_correct > 0 {
-                screen.set_color(crossterm::style::Color::Green)?;
+                screen.set_style(Style::Hit)?;
                 if line.len() <= n_correct {
                     screen.put_str(std::str::from_utf8(line).expect("strings must be utf8"))?;
                     n_correct -= line.len();
@@ -155,7 +155,7 @@ impl TextLines {
                 }
             }
             if n_correct < line.len() && n_mistaken > 0 {
-                screen.set_color(crossterm::style::Color::Red)?;
+                screen.set_style(Style::Miss)?;
                 if line.len() - n_correct <= n_mistaken {
                     screen.put_str(
                         std::str::from_utf8(&line[n_correct..]).expect("strings must be utf8"),
@@ -171,7 +171,7 @@ impl TextLines {
                 }
             }
             if n_mistaken + n_correct < line.len() {
-                screen.set_color(crossterm::style::Color::DarkGrey)?;
+                screen.set_style(Style::Blank)?;
                 screen.put_str(
                     std::str::from_utf8(&line[n_correct + n_mistaken..])
                         .expect("strings must be utf8"),

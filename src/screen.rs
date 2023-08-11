@@ -2,7 +2,7 @@ use std::io::{stdout, Result, Stdout, Write};
 
 use crossterm::{
     cursor, execute, queue,
-    style::{Color, Print, SetForegroundColor},
+    style::{Attribute, Color, Print, SetAttribute, SetForegroundColor},
     terminal::{size, Clear, ClearType},
 };
 
@@ -10,6 +10,12 @@ pub struct MainScreen {
     stdout: Stdout,
     pub width: u16,
     pub height: u16,
+}
+
+pub enum Style {
+    Hit,
+    Miss,
+    Blank,
 }
 
 impl MainScreen {
@@ -36,8 +42,24 @@ impl MainScreen {
         queue!(self.stdout, cursor::MoveTo(column, row))
     }
 
-    pub fn set_color(&mut self, color: Color) -> Result<()> {
-        queue!(self.stdout, SetForegroundColor(color))
+    pub fn set_style(&mut self, style: Style) -> Result<()> {
+        match style {
+            Style::Hit => queue!(
+                self.stdout,
+                SetAttribute(Attribute::Reset),
+                SetForegroundColor(Color::Green),
+            ),
+            Style::Miss => queue!(
+                self.stdout,
+                SetAttribute(Attribute::Underlined),
+                SetForegroundColor(Color::Red),
+            ),
+            Style::Blank => queue!(
+                self.stdout,
+                SetAttribute(Attribute::Reset),
+                SetForegroundColor(Color::DarkGrey),
+            ),
+        }
     }
 
     pub fn put_str(&mut self, s: &str) -> Result<()> {

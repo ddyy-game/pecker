@@ -2,12 +2,11 @@ use std::io::Result;
 
 use crossterm::{
     event::{read, Event, KeyCode, KeyModifiers},
-    style::Color,
     terminal::enable_raw_mode,
 };
 
 use crate::{
-    screen::MainScreen,
+    screen::{MainScreen, Style},
     text::{Action, TextLines},
 };
 
@@ -44,7 +43,7 @@ impl Pecker {
                     }
 
                     if event.code == KeyCode::Backspace {
-                        self.screen.set_color(Color::DarkGrey)?;
+                        self.screen.set_style(Style::Blank)?;
                         self.screen.set_char(self.text_lines.current() as char)?;
                         if self.text_lines.backward() {
                             self.text_lines.redraw(&mut self.screen)?;
@@ -64,11 +63,11 @@ impl Pecker {
                         let current_char = self.text_lines.current();
                         let action = self.text_lines.forward(c as u8);
 
-                        if action == Action::Mismatch {
-                            self.screen.set_color(Color::Red)?;
+                        if action != Action::Mismatch {
+                            self.screen.set_style(Style::Hit)?;
                             self.screen.set_char(current_char as char)?;
                         } else {
-                            self.screen.set_color(Color::Green)?;
+                            self.screen.set_style(Style::Miss)?;
                             self.screen.set_char(current_char as char)?;
                         }
                         self.text_lines.move_to_cursor(&mut self.screen)?;
