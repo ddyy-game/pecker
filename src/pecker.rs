@@ -63,7 +63,7 @@ impl Pecker {
                         let current_char = self.text_lines.current();
                         let action = self.text_lines.forward(c as u8);
 
-                        if !matches!(action, Action::Mismatch) {
+                        if !matches!(action, Action::Miss) {
                             self.screen.set_style(Style::Hit)?;
                             self.screen.set_char(current_char as char)?;
                         } else {

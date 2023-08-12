@@ -13,8 +13,8 @@ pub struct TextLines {
 }
 
 pub enum Action {
-    Match,
-    Mismatch,
+    Hit,
+    Miss,
     Redraw,
     End,
 }
@@ -72,7 +72,7 @@ impl TextLines {
         // if cursor is already at the end
         if y as usize == self.lines.len() - 1 && self.at_line_end(x, y) {
             return if self.n_miss > 0 {
-                Action::Mismatch
+                Action::Miss
             } else {
                 Action::End
             };
@@ -99,11 +99,11 @@ impl TextLines {
         if self.cursor_pos.0 == 0 {
             Action::Redraw
         } else if self.n_miss > 0 {
-            Action::Mismatch
+            Action::Miss
         } else if self.n_hit == self.raw_text.len() - 1 {
             Action::End
         } else {
-            Action::Match
+            Action::Hit
         }
     }
 
