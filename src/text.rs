@@ -2,14 +2,13 @@ use std::io::Result;
 
 use crate::screen::{MainScreen, Style};
 
+#[derive(Default)]
 pub struct TextLines {
     raw_text: Vec<u8>,
     lines: Vec<Vec<u8>>,
     n_hit: usize,
-    pub cursor_pos: (u16, u16),
-    screen_height: u16,
-    screen_width: u16,
     n_miss: usize,
+    pub cursor_pos: (u16, u16),
 }
 
 pub enum Action {
@@ -20,28 +19,18 @@ pub enum Action {
 }
 
 impl TextLines {
-    pub fn new(text: &str, width: u16, height: u16) -> TextLines {
+    pub fn new(text: &str, width: u16) -> TextLines {
         let mut raw_text: Vec<u8> = text.bytes().collect();
-        let text_width = (width - 8).min(((raw_text.len() as f32).sqrt().ceil() + 15.0) as u16);
-        let lines = wrap_string(&raw_text, text_width);
         raw_text.push(b' ');
-        TextLines {
+        let mut t = TextLines {
             raw_text,
-            lines,
-            n_hit: 0,
-            cursor_pos: (0, 0),
-            screen_width: width,
-            screen_height: height,
-            n_miss: 0,
-        }
+            ..Default::default()
+        };
+        t.rewrap(width);
+        t
     }
 
-    pub fn set_size(&mut self, width: u16, height: u16) -> bool {
-        if self.screen_width == width && self.screen_height == height {
-            return false;
-        }
-        self.screen_width = width;
-        self.screen_height = height;
+    pub fn rewrap(&mut self, width: u16) {
         let text_width =
             (width - 8).min(((self.raw_text.len() as f32).sqrt().ceil() + 15.0) as u16);
         self.lines = wrap_string(&self.raw_text, text_width);
@@ -53,7 +42,6 @@ impl TextLines {
         }
         pos.0 = n as u16;
         self.cursor_pos = pos;
-        true
     }
 
     #[inline]
@@ -69,8 +57,8 @@ impl TextLines {
     pub fn forward(&mut self, c: u8) -> Action {
         let (x, y) = self.cursor_pos;
 
-        // if cursor is already at the end
-        if y as usize == self.lines.len() - 1 && self.at_line_end(x, y) {
+        // if already at the end
+        if self.n_hit + self.n_miss == self.raw_text.len() - 1 {
             return if self.n_miss > 0 {
                 Action::Miss
             } else {
@@ -134,8 +122,8 @@ impl TextLines {
         column: u16,
         row: u16,
     ) -> Result<(u16, u16)> {
-        let offset_x = (self.screen_width - self.lines[row as usize].len() as u16) / 2;
-        let offset_y = (self.screen_height - self.lines.len() as u16) / 2;
+        let offset_x = (screen.width - self.lines[row as usize].len() as u16) / 2;
+        let offset_y = (screen.height - self.lines.len() as u16) / 2;
         screen.move_to(column + offset_x, row + offset_y)?;
         Ok((column + offset_x, row + offset_y))
     }

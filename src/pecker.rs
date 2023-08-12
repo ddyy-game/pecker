@@ -21,7 +21,6 @@ impl Pecker {
         let text_lines = TextLines::new(
             "Hello, world! This is example text from pecker.",
             screen.width,
-            screen.height,
         );
         Pecker { screen, text_lines }
     }
@@ -84,9 +83,8 @@ impl Pecker {
                 }
                 Event::Resize(width, height) => {
                     self.screen.set_size(width, height);
-                    if self.text_lines.set_size(width, height) {
-                        self.text_lines.redraw(&mut self.screen)?;
-                    }
+                    self.text_lines.rewrap(width);
+                    self.text_lines.redraw(&mut self.screen)?;
                 }
                 Event::FocusGained => (),
                 Event::FocusLost => (),
