@@ -28,6 +28,7 @@ impl Pecker {
         let expect = self.text_lines.reset(
             Some("Hello, world!\n\nThis is example text from pecker."),
             self.screen.width,
+            !self.text_lines.align_center,
         );
         self.text_lines.redraw(&mut self.screen)?;
         self.screen.debug(&format!("expect: {expect:?}"))?;
@@ -106,7 +107,8 @@ impl Pecker {
                 }
                 Event::Resize(width, height) => {
                     self.screen.set_size(width, height);
-                    self.text_lines.reset(None, width);
+                    self.text_lines
+                        .reset(None, width, self.text_lines.align_center);
                     self.text_lines.redraw(&mut self.screen)?;
                 }
                 Event::FocusGained | Event::FocusLost | Event::Mouse(_) => (),

@@ -9,6 +9,7 @@ pub struct TextLines {
     pub n_hit: usize,
     pub n_miss: usize,
     pub cursor_pos: (u16, u16),
+    pub align_center: bool,
 }
 
 pub enum State {
@@ -30,7 +31,7 @@ impl TextLines {
         Self::default()
     }
 
-    pub fn reset(&mut self, text: Option<&str>, width: u16) -> Expect {
+    pub fn reset(&mut self, text: Option<&str>, width: u16, align_center: bool) -> Expect {
         if let Some(text) = text {
             self.raw_text = text.bytes().collect();
             self.raw_text.push(b' ');
@@ -50,6 +51,7 @@ impl TextLines {
         }
         pos.0 = n as u16;
         self.cursor_pos = pos;
+        self.align_center = align_center;
 
         Expect::Char(self.current() as char)
     }
@@ -147,8 +149,16 @@ impl TextLines {
         column: u16,
         row: u16,
     ) -> Result<(u16, u16)> {
-        let offset_x = (screen.width - self.lines[row as usize].len() as u16 - 1) / 2;
-        let offset_y = (screen.height - self.lines.len() as u16) / 2;
+        let offset_x = if self.align_center {
+            (screen.width - self.lines[row as usize].len() as u16 - 1) / 2
+        } else {
+            8
+        };
+        let offset_y = if self.align_center {
+            (screen.height - self.lines.len() as u16) / 2
+        } else {
+            4
+        };
         screen.move_to(column + offset_x, row + offset_y)?;
         Ok((column + offset_x, row + offset_y))
     }
