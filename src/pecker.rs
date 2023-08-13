@@ -53,14 +53,7 @@ impl Pecker {
 
                         // step 2. update screen
                         // reset style for current char
-                        self.screen.set_char(
-                            (if current_char == '\n' {
-                                ' '
-                            } else {
-                                current_char
-                            })
-                            .blank(),
-                        )?;
+                        self.screen.set_char(current_char.blank())?;
                         // actually move the cursor on screen
                         if redraw {
                             self.text_lines.redraw(&mut self.screen)?;

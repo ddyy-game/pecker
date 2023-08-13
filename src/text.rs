@@ -155,55 +155,34 @@ impl TextLines {
 
     pub fn redraw(&mut self, screen: &mut MainScreen) -> Result<()> {
         screen.clear()?;
-        let mut n_correct = self.n_hit;
-        let mut n_mistaken = self.n_miss;
+        let mut n_hit = self.n_hit;
+        let mut n_miss = self.n_miss;
 
         for i in 0..self.lines.len() {
             self.move_to(screen, 0, i as u16)?;
-            let mut line = self.lines[i].clone();
-            let len = line.len();
-            line[len - 1] = b' ';
-            if n_correct > 0 {
-                if line.len() <= n_correct {
-                    screen.put_str(
-                        std::str::from_utf8(&line)
-                            .expect("strings must be utf8")
-                            .hit(),
-                    )?;
-                    n_correct -= line.len();
+            let line = std::str::from_utf8(&self.lines[i]).expect("string must be utf-8");
+
+            if n_hit > 0 {
+                if line.len() <= n_hit {
+                    n_hit -= line.len();
+                    screen.put_str(line.hit())?;
                     continue;
                 }
-                screen.put_str(
-                    std::str::from_utf8(&line[..n_correct])
-                        .expect("string slices must be utf-8")
-                        .hit(),
-                )?;
+                screen.put_str(line[..n_hit].hit())?;
             }
-            if n_correct < line.len() && n_mistaken > 0 {
-                if line.len() - n_correct <= n_mistaken {
-                    screen.put_str(
-                        std::str::from_utf8(&line[n_correct..])
-                            .expect("strings must be utf8")
-                            .miss(),
-                    )?;
-                    n_mistaken -= line.len() - n_correct;
-                    n_correct = 0;
+            if n_hit < line.len() && n_miss > 0 {
+                if line.len() - n_hit <= n_miss {
+                    screen.put_str(line[n_hit..].miss())?;
+                    n_miss -= line.len() - n_hit;
+                    n_hit = 0;
                     continue;
                 }
-                screen.put_str(
-                    std::str::from_utf8(&line[n_correct..n_correct + n_mistaken])
-                        .expect("string slices must be utf-8")
-                        .miss(),
-                )?;
+                screen.put_str(line[n_hit..n_hit + n_miss].miss())?;
             }
-            if n_mistaken + n_correct < line.len() {
-                screen.put_str(
-                    std::str::from_utf8(&line[n_correct + n_mistaken..])
-                        .expect("strings must be utf8")
-                        .blank(),
-                )?;
-                n_correct = 0;
-                n_mistaken = 0;
+            if n_miss + n_hit < line.len() {
+                screen.put_str(line[n_hit + n_miss..].blank())?;
+                n_hit = 0;
+                n_miss = 0;
             }
         }
 

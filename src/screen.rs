@@ -1,11 +1,10 @@
 use std::{
-    fmt::Display,
     io::{stdout, Result, Stdout, Write},
 };
 
 use crossterm::{
     cursor, execute, queue,
-    style::{ContentStyle, PrintStyledContent, StyledContent, Stylize},
+    style::{PrintStyledContent, StyledContent, Stylize},
     terminal::{size, Clear, ClearType},
 };
 
@@ -15,38 +14,43 @@ pub struct MainScreen {
     pub height: u16,
 }
 
-pub trait Styled {
-    type Styled: AsRef<ContentStyle>;
-    fn hit(self) -> Self::Styled;
-    fn miss(self) -> Self::Styled;
-    fn blank(self) -> Self::Styled;
-    fn default(self) -> Self::Styled;
+pub trait Styled: Sized {
+    fn format(self) -> String;
+    fn hit(self) -> StyledContent<String> {
+        self.format().green()
+    }
+    fn miss(self) -> StyledContent<String> {
+        self.format().red().underlined()
+    }
+    fn blank(self) -> StyledContent<String> {
+        self.format().dark_grey()
+    }
+    fn default(self) -> StyledContent<String> {
+        self.format().reset()
+    }
 }
 
-macro_rules! impl_styled {
-    ($($t:ty),*) => { $(
-        impl Styled for $t {
-            type Styled = StyledContent<Self>;
-            #[inline]
-            fn hit(self) -> Self::Styled {
-                self.green()
-            }
-            #[inline]
-            fn miss(self) -> Self::Styled {
-                self.red().underlined()
-            }
-            #[inline]
-            fn blank(self) -> Self::Styled {
-                self.dark_grey()
-            }
-            #[inline]
-            fn default(self) -> Self::Styled {
-                self.reset()
-            }
-        }
-    )* }
+impl Styled for &str {
+    fn format(self) -> String {
+        self.replace('\n', "⏎")
+    }
 }
-impl_styled!(char, String, &str);
+
+impl Styled for String {
+    fn format(self) -> String {
+        self.replace('\n', "⏎")
+    }
+}
+
+impl Styled for char {
+    fn format(self) -> String {
+        if self == '\n' {
+            "⏎".to_string()
+        } else {
+            self.to_string()
+        }
+    }
+}
 
 impl MainScreen {
     #[must_use]
@@ -73,11 +77,11 @@ impl MainScreen {
         queue!(self.stdout, cursor::MoveTo(column, row))
     }
 
-    pub fn put_str<D: Display>(&mut self, s: StyledContent<D>) -> Result<()> {
+    pub fn put_str(&mut self, s: StyledContent<String>) -> Result<()> {
         queue!(self.stdout, PrintStyledContent(s))
     }
 
-    pub fn set_char(&mut self, c: StyledContent<char>) -> Result<()> {
+    pub fn set_char(&mut self, c: StyledContent<String>) -> Result<()> {
         queue!(self.stdout, PrintStyledContent(c), cursor::MoveLeft(1))
     }
 
