@@ -78,6 +78,19 @@ impl MainScreen {
         Ok(())
     }
 
+    pub fn debug(&mut self, s: &str) -> Result<()> {
+        queue!(
+            self.stdout,
+            cursor::SavePosition,
+            cursor::MoveTo(0, self.height),
+            Print(" ".repeat(self.width as usize)),
+            cursor::MoveTo(0, self.height),
+            Print(s),
+            cursor::RestorePosition,
+        )?;
+        self.flush()
+    }
+
     pub fn flush(&mut self) -> Result<()> {
         self.stdout.flush()
     }

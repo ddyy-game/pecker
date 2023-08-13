@@ -6,8 +6,8 @@ use crate::screen::{MainScreen, Style};
 pub struct TextLines {
     raw_text: Vec<u8>,
     lines: Vec<Vec<u8>>,
-    n_hit: usize,
-    n_miss: usize,
+    pub n_hit: usize,
+    pub n_miss: usize,
     pub cursor_pos: (u16, u16),
 }
 
@@ -95,19 +95,23 @@ impl TextLines {
         }
     }
 
-    pub fn backward(&mut self) -> bool {
+    pub fn backward(&mut self) -> Action {
         if self.n_miss == 0 {
-            return false;
+            return Action::Hit;
         }
         self.n_miss -= 1;
         let pos = &mut self.cursor_pos;
         if pos.0 as usize == 0 {
             pos.1 -= 1;
             pos.0 = (self.lines[pos.1 as usize].len() - 1) as u16;
-            return true;
+            return Action::Redraw;
         }
         pos.0 -= 1;
-        false
+        if self.n_miss == 0 {
+            Action::Hit
+        } else {
+            Action::Miss
+        }
     }
 
     pub fn move_to_cursor(&mut self, screen: &mut MainScreen) -> Result<(u16, u16)> {
