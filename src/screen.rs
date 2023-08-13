@@ -1,8 +1,11 @@
-use std::io::{stdout, Result, Stdout, Write};
+use std::{
+    fmt::Display,
+    io::{stdout, Result, Stdout, Write},
+};
 
 use crossterm::{
     cursor, execute, queue,
-    style::{Attribute, Color, Print, SetAttribute, SetForegroundColor},
+    style::{ContentStyle, PrintStyledContent, StyledContent, Stylize},
     terminal::{size, Clear, ClearType},
 };
 
@@ -12,12 +15,38 @@ pub struct MainScreen {
     pub height: u16,
 }
 
-#[derive(Copy, Clone)]
-pub enum Style {
-    Hit,
-    Miss,
-    Blank,
+pub trait Styled {
+    type Styled: AsRef<ContentStyle>;
+    fn hit(self) -> Self::Styled;
+    fn miss(self) -> Self::Styled;
+    fn blank(self) -> Self::Styled;
+    fn default(self) -> Self::Styled;
 }
+
+macro_rules! impl_styled {
+    ($($t:ty),*) => { $(
+        impl Styled for $t {
+            type Styled = StyledContent<Self>;
+            #[inline]
+            fn hit(self) -> Self::Styled {
+                self.green()
+            }
+            #[inline]
+            fn miss(self) -> Self::Styled {
+                self.red().underlined()
+            }
+            #[inline]
+            fn blank(self) -> Self::Styled {
+                self.dark_grey()
+            }
+            #[inline]
+            fn default(self) -> Self::Styled {
+                self.reset()
+            }
+        }
+    )* }
+}
+impl_styled!(char, String, &str);
 
 impl MainScreen {
     #[must_use]
@@ -44,36 +73,12 @@ impl MainScreen {
         queue!(self.stdout, cursor::MoveTo(column, row))
     }
 
-    pub fn set_style(&mut self, style: Style) -> Result<()> {
-        match style {
-            Style::Hit => queue!(
-                self.stdout,
-                SetAttribute(Attribute::Reset),
-                SetForegroundColor(Color::Green),
-            ),
-            Style::Miss => queue!(
-                self.stdout,
-                SetAttribute(Attribute::Underlined),
-                SetForegroundColor(Color::Red),
-            ),
-            Style::Blank => queue!(
-                self.stdout,
-                SetAttribute(Attribute::Reset),
-                SetForegroundColor(Color::DarkGrey),
-            ),
-        }
+    pub fn put_str<D: Display>(&mut self, s: StyledContent<D>) -> Result<()> {
+        queue!(self.stdout, PrintStyledContent(s))
     }
 
-    pub fn put_str(&mut self, s: &str) -> Result<()> {
-        queue!(self.stdout, Print(s))
-    }
-
-    pub fn set_char(&mut self, c: char) -> Result<()> {
-        queue!(
-            self.stdout,
-            Print(if c == '\n' { ' ' } else { c }),
-            cursor::MoveLeft(1)
-        )
+    pub fn set_char(&mut self, c: StyledContent<char>) -> Result<()> {
+        queue!(self.stdout, PrintStyledContent(c), cursor::MoveLeft(1))
     }
 
     pub fn debug(&mut self, s: &str) -> Result<()> {
@@ -81,9 +86,9 @@ impl MainScreen {
             self.stdout,
             cursor::SavePosition,
             cursor::MoveTo(0, self.height),
-            Print(" ".repeat(self.width as usize)),
+            PrintStyledContent(" ".repeat(self.width as usize).default()),
             cursor::MoveTo(0, self.height),
-            Print(s),
+            PrintStyledContent(s.default()),
             cursor::RestorePosition,
         )?;
         self.flush()

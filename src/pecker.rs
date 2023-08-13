@@ -6,7 +6,7 @@ use crossterm::{
 };
 
 use crate::{
-    screen::{MainScreen, Style},
+    screen::{MainScreen, Styled},
     text::{State, TextLines},
 };
 
@@ -53,8 +53,14 @@ impl Pecker {
 
                         // step 2. update screen
                         // reset style for current char
-                        self.screen.set_style(Style::Blank)?;
-                        self.screen.set_char(current_char)?;
+                        self.screen.set_char(
+                            (if current_char == '\n' {
+                                ' '
+                            } else {
+                                current_char
+                            })
+                            .blank(),
+                        )?;
                         // actually move the cursor on screen
                         if redraw {
                             self.text_lines.redraw(&mut self.screen)?;
@@ -84,12 +90,10 @@ impl Pecker {
                         // set style for current char
                         match state {
                             State::Hit | State::End => {
-                                self.screen.set_style(Style::Hit)?;
-                                self.screen.set_char(current_char)?;
+                                self.screen.set_char(current_char.hit())?;
                             }
                             State::Miss => {
-                                self.screen.set_style(Style::Miss)?;
-                                self.screen.set_char(current_char)?;
+                                self.screen.set_char(current_char.miss())?;
                             }
                         };
                         // actually move the cursor on screen

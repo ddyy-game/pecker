@@ -1,6 +1,6 @@
 use std::io::Result;
 
-use crate::screen::{MainScreen, Style};
+use crate::screen::{MainScreen, Styled};
 
 #[derive(Default)]
 pub struct TextLines {
@@ -164,21 +164,27 @@ impl TextLines {
             let len = line.len();
             line[len - 1] = b' ';
             if n_correct > 0 {
-                screen.set_style(Style::Hit)?;
                 if line.len() <= n_correct {
-                    screen.put_str(std::str::from_utf8(&line).expect("strings must be utf8"))?;
+                    screen.put_str(
+                        std::str::from_utf8(&line)
+                            .expect("strings must be utf8")
+                            .hit(),
+                    )?;
                     n_correct -= line.len();
                     continue;
                 }
                 screen.put_str(
-                    std::str::from_utf8(&line[..n_correct]).expect("string slices must be utf-8"),
+                    std::str::from_utf8(&line[..n_correct])
+                        .expect("string slices must be utf-8")
+                        .hit(),
                 )?;
             }
             if n_correct < line.len() && n_mistaken > 0 {
-                screen.set_style(Style::Miss)?;
                 if line.len() - n_correct <= n_mistaken {
                     screen.put_str(
-                        std::str::from_utf8(&line[n_correct..]).expect("strings must be utf8"),
+                        std::str::from_utf8(&line[n_correct..])
+                            .expect("strings must be utf8")
+                            .miss(),
                     )?;
                     n_mistaken -= line.len() - n_correct;
                     n_correct = 0;
@@ -186,14 +192,15 @@ impl TextLines {
                 }
                 screen.put_str(
                     std::str::from_utf8(&line[n_correct..n_correct + n_mistaken])
-                        .expect("string slices must be utf-8"),
+                        .expect("string slices must be utf-8")
+                        .miss(),
                 )?;
             }
             if n_mistaken + n_correct < line.len() {
-                screen.set_style(Style::Blank)?;
                 screen.put_str(
                     std::str::from_utf8(&line[n_correct + n_mistaken..])
-                        .expect("strings must be utf8"),
+                        .expect("strings must be utf8")
+                        .blank(),
                 )?;
                 n_correct = 0;
                 n_mistaken = 0;
