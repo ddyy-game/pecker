@@ -1,6 +1,4 @@
-use std::{
-    io::{stdout, Result, Stdout, Write},
-};
+use std::io::{stdout, Result, Stdout, Write};
 
 use crossterm::{
     cursor, execute, queue,
@@ -15,39 +13,44 @@ pub struct MainScreen {
 }
 
 pub trait Styled: Sized {
-    fn format(self) -> String;
-    fn hit(self) -> StyledContent<String> {
+    type Formatted: Stylize<Styled = Self::Formatted>;
+    fn format(self) -> Self::Formatted;
+
+    fn hit(self) -> Self::Formatted {
         self.format().green()
     }
-    fn miss(self) -> StyledContent<String> {
+    fn miss(self) -> Self::Formatted {
         self.format().red().underlined()
     }
-    fn blank(self) -> StyledContent<String> {
+    fn blank(self) -> Self::Formatted {
         self.format().dark_grey()
     }
-    fn default(self) -> StyledContent<String> {
+    fn default(self) -> Self::Formatted {
         self.format().reset()
     }
 }
 
 impl Styled for &str {
-    fn format(self) -> String {
-        self.replace('\n', "⏎")
+    type Formatted = StyledContent<String>;
+    fn format(self) -> Self::Formatted {
+        self.replace('\n', "⏎").stylize()
     }
 }
 
 impl Styled for String {
-    fn format(self) -> String {
-        self.replace('\n', "⏎")
+    type Formatted = StyledContent<String>;
+    fn format(self) -> Self::Formatted {
+        self.replace('\n', "⏎").stylize()
     }
 }
 
 impl Styled for char {
-    fn format(self) -> String {
+    type Formatted = StyledContent<char>;
+    fn format(self) -> Self::Formatted {
         if self == '\n' {
-            "⏎".to_string()
+            '⏎'.stylize()
         } else {
-            self.to_string()
+            self.stylize()
         }
     }
 }
@@ -81,7 +84,7 @@ impl MainScreen {
         queue!(self.stdout, PrintStyledContent(s))
     }
 
-    pub fn set_char(&mut self, c: StyledContent<String>) -> Result<()> {
+    pub fn set_char(&mut self, c: StyledContent<char>) -> Result<()> {
         queue!(self.stdout, PrintStyledContent(c), cursor::MoveLeft(1))
     }
 
