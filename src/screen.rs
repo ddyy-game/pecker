@@ -12,49 +12,6 @@ pub struct MainScreen {
     pub height: u16,
 }
 
-pub trait Styled: Sized {
-    type Formatted: Stylize<Styled = Self::Formatted>;
-    fn format(self) -> Self::Formatted;
-
-    fn hit(self) -> Self::Formatted {
-        self.format().green()
-    }
-    fn miss(self) -> Self::Formatted {
-        self.format().red().underlined()
-    }
-    fn blank(self) -> Self::Formatted {
-        self.format().dark_grey()
-    }
-    fn default(self) -> Self::Formatted {
-        self.format().reset()
-    }
-}
-
-impl Styled for &str {
-    type Formatted = StyledContent<String>;
-    fn format(self) -> Self::Formatted {
-        self.replace('\n', "⏎").stylize()
-    }
-}
-
-impl Styled for String {
-    type Formatted = StyledContent<String>;
-    fn format(self) -> Self::Formatted {
-        self.replace('\n', "⏎").stylize()
-    }
-}
-
-impl Styled for char {
-    type Formatted = StyledContent<char>;
-    fn format(self) -> Self::Formatted {
-        if self == '\n' {
-            '⏎'.stylize()
-        } else {
-            self.stylize()
-        }
-    }
-}
-
 impl MainScreen {
     #[must_use]
     pub fn new() -> Self {
@@ -109,5 +66,48 @@ impl MainScreen {
 impl Default for MainScreen {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub trait Styled: Sized {
+    type Formatted: Stylize<Styled = Self::Formatted>;
+    fn format(self) -> Self::Formatted;
+
+    fn hit(self) -> Self::Formatted {
+        self.format().green()
+    }
+    fn miss(self) -> Self::Formatted {
+        self.format().red().underlined()
+    }
+    fn blank(self) -> Self::Formatted {
+        self.format().dark_grey()
+    }
+    fn default(self) -> Self::Formatted {
+        self.format().reset()
+    }
+}
+
+impl Styled for &str {
+    type Formatted = StyledContent<String>;
+    fn format(self) -> Self::Formatted {
+        self.replace('\n', "⏎").stylize()
+    }
+}
+
+impl Styled for String {
+    type Formatted = StyledContent<String>;
+    fn format(self) -> Self::Formatted {
+        self.replace('\n', "⏎").stylize()
+    }
+}
+
+impl Styled for char {
+    type Formatted = StyledContent<char>;
+    fn format(self) -> Self::Formatted {
+        if self == '\n' {
+            '⏎'.stylize()
+        } else {
+            self.stylize()
+        }
     }
 }
