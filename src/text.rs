@@ -11,26 +11,32 @@ pub struct TextLines {
     pub cursor_pos: (u16, u16),
 }
 
-pub enum Action {
+pub enum State {
     Hit,
     Miss,
-    Redraw,
     End,
 }
 
+#[derive(Debug)]
+pub enum Expect {
+    Char(char),
+    Backspace,
+}
+
 impl TextLines {
-    pub fn new(text: &str, width: u16) -> TextLines {
-        let mut raw_text: Vec<u8> = text.bytes().collect();
-        raw_text.push(b' ');
-        let mut t = TextLines {
-            raw_text,
-            ..Default::default()
-        };
-        t.rewrap(width);
-        t
+    pub fn new() -> TextLines {
+        Default::default()
     }
 
-    pub fn rewrap(&mut self, width: u16) {
+    pub fn reset(&mut self, text: Option<&str>, width: u16) -> Expect {
+        if let Some(text) = text {
+            self.raw_text = text.bytes().collect();
+            self.raw_text.push(b' ');
+            self.n_hit = 0;
+            self.n_miss = 0;
+            self.cursor_pos = (0, 0);
+        }
+
         let text_width =
             (width - 8).min(((self.raw_text.len() as f32).sqrt().ceil() + 15.0) as u16);
         self.lines = wrap_string(&self.raw_text, text_width);
@@ -42,6 +48,8 @@ impl TextLines {
         }
         pos.0 = n as u16;
         self.cursor_pos = pos;
+
+        Expect::Char(self.current() as char)
     }
 
     #[inline]
@@ -54,21 +62,25 @@ impl TextLines {
         column as usize == self.lines[row as usize].len() - 1
     }
 
-    pub fn forward(&mut self, c: u8) -> Action {
+    pub fn forward(&mut self, c: char) -> (State, Expect, bool) {
         let (x, y) = self.cursor_pos;
 
         // if already at the end
         if self.n_hit + self.n_miss == self.raw_text.len() - 1 {
-            return if self.n_miss > 0 {
-                Action::Miss
-            } else {
-                Action::End
-            };
+            return (
+                if self.n_miss == 0 {
+                    State::End
+                } else {
+                    State::Miss
+                },
+                Expect::Backspace,
+                false,
+            );
         }
 
         // check if matches
         if self.n_miss == 0
-            && (c == self.raw_text[self.n_hit] || self.at_line_end(x, y) && c == b'\n')
+            && (c as u8 == self.raw_text[self.n_hit] || self.at_line_end(x, y) && c == '\n')
         {
             self.n_hit += 1;
         } else {
@@ -83,34 +95,46 @@ impl TextLines {
             self.cursor_pos.0 += 1
         }
 
-        // respond action to be taken after moving forward
-        if self.cursor_pos.0 == 0 {
-            Action::Redraw
-        } else if self.n_miss > 0 {
-            Action::Miss
+        // output
+        let c = self.current() as char;
+        let state = if self.n_miss > 0 {
+            State::Miss
         } else if self.n_hit == self.raw_text.len() - 1 {
-            Action::End
+            State::End
         } else {
-            Action::Hit
-        }
+            State::Hit
+        };
+        let expect = if self.n_miss == 0 {
+            Expect::Char(c)
+        } else {
+            Expect::Backspace
+        };
+        let redraw = self.cursor_pos.0 == 0;
+
+        (state, expect, redraw)
     }
 
-    pub fn backward(&mut self) -> Action {
+    pub fn backward(&mut self) -> (Expect, bool) {
         if self.n_miss == 0 {
-            return Action::Hit;
+            return (Expect::Char(self.current() as char), false);
         }
+
         self.n_miss -= 1;
         let pos = &mut self.cursor_pos;
-        if pos.0 as usize == 0 {
+        let redraw = if pos.0 as usize == 0 {
             pos.1 -= 1;
             pos.0 = (self.lines[pos.1 as usize].len() - 1) as u16;
-            return Action::Redraw;
-        }
-        pos.0 -= 1;
-        if self.n_miss == 0 {
-            Action::Hit
+            true
         } else {
-            Action::Miss
+            pos.0 -= 1;
+            false
+        };
+
+        let c = self.current() as char;
+        if self.n_miss == 0 {
+            (Expect::Char(c), redraw)
+        } else {
+            (Expect::Backspace, redraw)
         }
     }
 

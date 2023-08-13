@@ -7,7 +7,7 @@ use crossterm::{
 
 use crate::{
     screen::{MainScreen, Style},
-    text::{Action, TextLines},
+    text::{State, TextLines},
 };
 
 pub struct Pecker {
@@ -18,18 +18,18 @@ pub struct Pecker {
 impl Pecker {
     pub fn new() -> Self {
         let screen = MainScreen::new();
-        let text_lines = TextLines::new(
-            "Hello, world! This is example text from pecker.",
-            screen.width,
-        );
+        let text_lines = TextLines::new();
         Pecker { screen, text_lines }
     }
 
     pub fn reset(&mut self) -> Result<()> {
         enable_raw_mode()?;
+        let expect = self.text_lines.reset(
+            Some("Hello, world! This is example text from pecker."),
+            self.screen.width,
+        );
         self.text_lines.redraw(&mut self.screen)?;
-        self.screen
-            .debug(&format!("next: {}", self.text_lines.current() as char))?;
+        self.screen.debug(&format!("expect: {:?}", expect))?;
         Ok(())
     }
 
@@ -44,23 +44,25 @@ impl Pecker {
                     }
 
                     if event.code == KeyCode::Backspace {
-                        self.screen.set_style(Style::Blank)?;
-                        self.screen.set_char(self.text_lines.current() as char)?;
-                        match self.text_lines.backward() {
-                            Action::Redraw => {
-                                self.text_lines.redraw(&mut self.screen)?;
-                            }
-                            _ => {
-                                self.text_lines.move_to_cursor(&mut self.screen)?;
-                            }
-                        };
+                        // step 1. update text lines
+                        // record current char
+                        let current_char = self.text_lines.current() as char;
+                        // move backward
+                        let (expect, redraw) = self.text_lines.backward();
 
-                        if self.text_lines.n_miss > 0 {
-                            self.screen.debug("next: backspace")?;
+                        // step 2. update screen
+                        // reset style for current char
+                        self.screen.set_style(Style::Blank)?;
+                        self.screen.set_char(current_char)?;
+                        // actually move the cursor on screen
+                        if redraw {
+                            self.text_lines.redraw(&mut self.screen)?;
                         } else {
-                            self.screen
-                                .debug(&format!("next: {}", self.text_lines.current() as char))?;
+                            self.text_lines.move_to_cursor(&mut self.screen)?;
                         }
+
+                        // step 3. inspect next char
+                        self.screen.debug(&format!("expect: {:?}", expect))?;
                         continue;
                     }
 
@@ -71,43 +73,42 @@ impl Pecker {
                     };
 
                     if let Some(c) = c {
-                        let current_char = self.text_lines.current();
-                        let action = self.text_lines.forward(c as u8);
+                        // step 1. update text lines
+                        // record current char
+                        let current_char = self.text_lines.current() as char;
+                        // move forward
+                        let (state, expect, redraw) = self.text_lines.forward(c);
 
-                        match action {
-                            Action::Miss => {
-                                self.screen.set_style(Style::Miss)?;
-                                self.screen.set_char(current_char as char)?;
-                            }
-                            _ => {
+                        // step 2. update screen
+                        // set style for current char
+                        match state {
+                            State::Hit | State::End => {
                                 self.screen.set_style(Style::Hit)?;
-                                self.screen.set_char(current_char as char)?;
+                                self.screen.set_char(current_char)?;
+                            }
+                            State::Miss => {
+                                self.screen.set_style(Style::Miss)?;
+                                self.screen.set_char(current_char)?;
                             }
                         };
-
-                        match action {
-                            Action::Redraw => self.text_lines.redraw(&mut self.screen)?,
-                            _ => {
-                                self.text_lines.move_to_cursor(&mut self.screen)?;
-                            }
-                        }
-
-                        if self.text_lines.n_miss > 0 {
-                            self.screen.debug("next: backspace")?;
+                        // actually move the cursor on screen
+                        if redraw {
+                            self.text_lines.redraw(&mut self.screen)?;
                         } else {
-                            self.screen
-                                .debug(&format!("next: {}", self.text_lines.current() as char))?;
+                            self.text_lines.move_to_cursor(&mut self.screen)?;
                         }
 
-                        if matches!(action, Action::End) {
-                            self.screen.clear()?;
-                            break;
+                        // step 3. inspect next char
+                        self.screen.debug(&format!("expect: {:?}", expect))?;
+
+                        if matches!(state, State::End) {
+                            self.reset()?;
                         }
                     }
                 }
                 Event::Resize(width, height) => {
                     self.screen.set_size(width, height);
-                    self.text_lines.rewrap(width);
+                    self.text_lines.reset(None, width);
                     self.text_lines.redraw(&mut self.screen)?;
                 }
                 Event::FocusGained => (),
