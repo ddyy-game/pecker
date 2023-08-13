@@ -12,6 +12,7 @@ pub struct MainScreen {
     pub height: u16,
 }
 
+#[derive(Copy, Clone)]
 pub enum Style {
     Hit,
     Miss,
@@ -19,9 +20,10 @@ pub enum Style {
 }
 
 impl MainScreen {
+    #[must_use]
     pub fn new() -> Self {
         let (width, height) = size().expect("cannot determine terminal size");
-        MainScreen {
+        Self {
             stdout: stdout(),
             width,
             height,
@@ -74,14 +76,6 @@ impl MainScreen {
         )
     }
 
-    pub fn put_str_centered(&mut self, s: &str, row: i16) -> Result<()> {
-        let len: u16 = s.len().try_into().expect("string length too long");
-        let c = (self.width - len) / 2;
-        let r = self.wrap_row(row);
-        queue!(self.stdout, cursor::MoveTo(c, r), Print(s))?;
-        Ok(())
-    }
-
     pub fn debug(&mut self, s: &str) -> Result<()> {
         queue!(
             self.stdout,
@@ -97,18 +91,6 @@ impl MainScreen {
 
     pub fn flush(&mut self) -> Result<()> {
         self.stdout.flush()
-    }
-
-    fn wrap_row(&self, row: i16) -> u16 {
-        if row > 0 && row as u16 >= self.height {
-            self.height
-        } else if row >= 0 {
-            row as u16
-        } else if self.height >= (-row as u16) {
-            self.height - (-row as u16)
-        } else {
-            0u16
-        }
     }
 }
 

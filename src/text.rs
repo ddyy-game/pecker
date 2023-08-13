@@ -25,8 +25,9 @@ pub enum Expect {
 }
 
 impl TextLines {
-    pub fn new() -> TextLines {
-        Default::default()
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn reset(&mut self, text: Option<&str>, width: u16) -> Expect {
@@ -54,17 +55,20 @@ impl TextLines {
     }
 
     #[inline]
+    #[must_use]
     pub fn current(&self) -> u8 {
         self.raw_text[self.n_hit + self.n_miss]
     }
 
     #[inline]
+    #[must_use]
     pub fn at_line_end(&self) -> bool {
         let (column, row) = self.cursor_pos;
         column as usize == self.lines[row as usize].len() - 1
     }
 
     #[inline]
+    #[must_use]
     pub fn is_softbreak(&self) -> bool {
         self.at_line_end() && self.current() == b' '
     }
@@ -78,7 +82,7 @@ impl TextLines {
             {
                 self.n_hit += 1;
             } else {
-                self.n_miss += 1
+                self.n_miss += 1;
             }
 
             // move cursor
@@ -86,7 +90,7 @@ impl TextLines {
                 self.cursor_pos.1 += 1;
                 self.cursor_pos.0 = 0;
             } else {
-                self.cursor_pos.0 += 1
+                self.cursor_pos.0 += 1;
             }
         }
 
@@ -165,12 +169,10 @@ impl TextLines {
                     screen.put_str(std::str::from_utf8(&line).expect("strings must be utf8"))?;
                     n_correct -= line.len();
                     continue;
-                } else {
-                    screen.put_str(
-                        std::str::from_utf8(&line[..n_correct])
-                            .expect("string slices must be utf-8"),
-                    )?;
                 }
+                screen.put_str(
+                    std::str::from_utf8(&line[..n_correct]).expect("string slices must be utf-8"),
+                )?;
             }
             if n_correct < line.len() && n_mistaken > 0 {
                 screen.set_style(Style::Miss)?;
@@ -181,12 +183,11 @@ impl TextLines {
                     n_mistaken -= line.len() - n_correct;
                     n_correct = 0;
                     continue;
-                } else {
-                    screen.put_str(
-                        std::str::from_utf8(&line[n_correct..n_correct + n_mistaken])
-                            .expect("string slices must be utf-8"),
-                    )?;
                 }
+                screen.put_str(
+                    std::str::from_utf8(&line[n_correct..n_correct + n_mistaken])
+                        .expect("string slices must be utf-8"),
+                )?;
             }
             if n_mistaken + n_correct < line.len() {
                 screen.set_style(Style::Blank)?;

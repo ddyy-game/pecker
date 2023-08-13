@@ -16,10 +16,11 @@ pub struct Pecker {
 }
 
 impl Pecker {
+    #[must_use]
     pub fn new() -> Self {
         let screen = MainScreen::new();
         let text_lines = TextLines::new();
-        Pecker { screen, text_lines }
+        Self { screen, text_lines }
     }
 
     pub fn reset(&mut self) -> Result<()> {
@@ -29,7 +30,7 @@ impl Pecker {
             self.screen.width,
         );
         self.text_lines.redraw(&mut self.screen)?;
-        self.screen.debug(&format!("expect: {:?}", expect))?;
+        self.screen.debug(&format!("expect: {expect:?}"))?;
         Ok(())
     }
 
@@ -62,7 +63,7 @@ impl Pecker {
                         }
 
                         // step 3. inspect next char
-                        self.screen.debug(&format!("expect: {:?}", expect))?;
+                        self.screen.debug(&format!("expect: {expect:?}"))?;
                         continue;
                     }
 
@@ -99,7 +100,7 @@ impl Pecker {
                         }
 
                         // step 3. inspect next char
-                        self.screen.debug(&format!("expect: {:?}", expect))?;
+                        self.screen.debug(&format!("expect: {expect:?}"))?;
 
                         if matches!(state, State::End) {
                             self.reset()?;
@@ -111,9 +112,7 @@ impl Pecker {
                     self.text_lines.reset(None, width);
                     self.text_lines.redraw(&mut self.screen)?;
                 }
-                Event::FocusGained => (),
-                Event::FocusLost => (),
-                Event::Mouse(_) => (),
+                Event::FocusGained | Event::FocusLost | Event::Mouse(_) => (),
             }
         }
 
