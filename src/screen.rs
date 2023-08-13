@@ -67,7 +67,11 @@ impl MainScreen {
     }
 
     pub fn set_char(&mut self, c: char) -> Result<()> {
-        queue!(self.stdout, Print(c), cursor::MoveLeft(1))
+        queue!(
+            self.stdout,
+            Print(if c == '\n' { ' ' } else { c }),
+            cursor::MoveLeft(1)
+        )
     }
 
     pub fn put_str_centered(&mut self, s: &str, row: i16) -> Result<()> {

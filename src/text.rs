@@ -20,6 +20,7 @@ pub enum State {
 #[derive(Debug)]
 pub enum Expect {
     Char(char),
+    Softbreak,
     Backspace,
 }
 
@@ -58,45 +59,38 @@ impl TextLines {
     }
 
     #[inline]
-    pub fn at_line_end(&self, column: u16, row: u16) -> bool {
+    pub fn at_line_end(&self) -> bool {
+        let (column, row) = self.cursor_pos;
         column as usize == self.lines[row as usize].len() - 1
     }
 
+    #[inline]
+    pub fn is_softbreak(&self) -> bool {
+        self.at_line_end() && self.current() == b' '
+    }
+
     pub fn forward(&mut self, c: char) -> (State, Expect, bool) {
-        let (x, y) = self.cursor_pos;
+        // do not move any further if already at the end
+        if self.n_hit + self.n_miss != self.raw_text.len() - 1 {
+            // check if matches
+            if self.n_miss == 0
+                && (c as u8 == self.raw_text[self.n_hit] || self.is_softbreak() && c == '\n')
+            {
+                self.n_hit += 1;
+            } else {
+                self.n_miss += 1
+            }
 
-        // if already at the end
-        if self.n_hit + self.n_miss == self.raw_text.len() - 1 {
-            return (
-                if self.n_miss == 0 {
-                    State::End
-                } else {
-                    State::Miss
-                },
-                Expect::Backspace,
-                false,
-            );
-        }
-
-        // check if matches
-        if self.n_miss == 0
-            && (c as u8 == self.raw_text[self.n_hit] || self.at_line_end(x, y) && c == '\n')
-        {
-            self.n_hit += 1;
-        } else {
-            self.n_miss += 1
-        }
-
-        // move cursor
-        if self.at_line_end(x, y) {
-            self.cursor_pos.1 += 1;
-            self.cursor_pos.0 = 0;
-        } else {
-            self.cursor_pos.0 += 1
+            // move cursor
+            if self.at_line_end() {
+                self.cursor_pos.1 += 1;
+                self.cursor_pos.0 = 0;
+            } else {
+                self.cursor_pos.0 += 1
+            }
         }
 
         // output
-        let c = self.current() as char;
         let state = if self.n_miss > 0 {
             State::Miss
         } else if self.n_hit == self.raw_text.len() - 1 {
@@ -104,10 +98,12 @@ impl TextLines {
         } else {
             State::Hit
         };
-        let expect = if self.n_miss == 0 {
-            Expect::Char(c)
-        } else {
+        let expect = if self.n_miss != 0 {
             Expect::Backspace
+        } else if self.is_softbreak() {
+            Expect::Softbreak
+        } else {
+            Expect::Char(self.current() as char)
         };
         let redraw = self.cursor_pos.0 == 0;
 
@@ -115,26 +111,23 @@ impl TextLines {
     }
 
     pub fn backward(&mut self) -> (Expect, bool) {
-        if self.n_miss == 0 {
-            return (Expect::Char(self.current() as char), false);
+        if self.n_miss != 0 {
+            self.n_miss -= 1;
+            let (x, y) = self.cursor_pos;
+            if x == 0 {
+                self.cursor_pos.1 -= 1;
+                self.cursor_pos.0 = (self.lines[y as usize - 1].len() - 1) as u16;
+            } else {
+                self.cursor_pos.0 -= 1;
+            };
         }
 
-        self.n_miss -= 1;
-        let pos = &mut self.cursor_pos;
-        let redraw = if pos.0 as usize == 0 {
-            pos.1 -= 1;
-            pos.0 = (self.lines[pos.1 as usize].len() - 1) as u16;
-            true
+        if self.n_miss != 0 {
+            (Expect::Backspace, false)
+        } else if self.is_softbreak() {
+            (Expect::Softbreak, true)
         } else {
-            pos.0 -= 1;
-            false
-        };
-
-        let c = self.current() as char;
-        if self.n_miss == 0 {
-            (Expect::Char(c), redraw)
-        } else {
-            (Expect::Backspace, redraw)
+            (Expect::Char(self.current() as char), false)
         }
     }
 
@@ -150,7 +143,7 @@ impl TextLines {
         column: u16,
         row: u16,
     ) -> Result<(u16, u16)> {
-        let offset_x = (screen.width - self.lines[row as usize].len() as u16) / 2;
+        let offset_x = (screen.width - self.lines[row as usize].len() as u16 - 1) / 2;
         let offset_y = (screen.height - self.lines.len() as u16) / 2;
         screen.move_to(column + offset_x, row + offset_y)?;
         Ok((column + offset_x, row + offset_y))
@@ -163,11 +156,13 @@ impl TextLines {
 
         for i in 0..self.lines.len() {
             self.move_to(screen, 0, i as u16)?;
-            let line = &self.lines[i];
+            let mut line = self.lines[i].clone();
+            let len = line.len();
+            line[len - 1] = b' ';
             if n_correct > 0 {
                 screen.set_style(Style::Hit)?;
                 if line.len() <= n_correct {
-                    screen.put_str(std::str::from_utf8(line).expect("strings must be utf8"))?;
+                    screen.put_str(std::str::from_utf8(&line).expect("strings must be utf8"))?;
                     n_correct -= line.len();
                     continue;
                 } else {
@@ -213,14 +208,19 @@ impl TextLines {
 fn wrap_string(text: &[u8], width: u16) -> Vec<Vec<u8>> {
     let mut lines = Vec::new();
     let mut current_line = Vec::new();
+    let mut len = 0;
 
-    for word in text.split(|c| c == &b' ') {
-        if current_line.len() + word.len() > width as usize {
+    for word in text.split(|c| c == &b' ' || c == &b'\n') {
+        let c = if len == 0 { 0 } else { text[len - 1] };
+        if c == b'\n' || current_line.len() + word.len() > width as usize {
             lines.push(current_line);
             current_line = Vec::new();
         }
+        len += word.len() + 1;
         current_line.extend_from_slice(word);
-        current_line.push(b' ');
+        if len != text.len() + 1 {
+            current_line.push(text[len - 1]);
+        };
     }
     if !current_line.is_empty() {
         lines.push(current_line);

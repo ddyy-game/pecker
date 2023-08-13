@@ -25,7 +25,7 @@ impl Pecker {
     pub fn reset(&mut self) -> Result<()> {
         enable_raw_mode()?;
         let expect = self.text_lines.reset(
-            Some("Hello, world! This is example text from pecker."),
+            Some("Hello, world!\n\nThis is example text from pecker."),
             self.screen.width,
         );
         self.text_lines.redraw(&mut self.screen)?;
