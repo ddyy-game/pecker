@@ -92,10 +92,10 @@ impl MainScreen {
         queue!(
             self.stdout,
             cursor::SavePosition,
-            cursor::MoveTo(0, self.height),
-            PrintStyledContent(" ".repeat(self.width as usize).default()),
-            cursor::MoveTo(0, self.height),
-            PrintStyledContent(s.default()),
+            cursor::MoveTo(1, self.height - 1),
+            PrintStyledContent(" ".repeat(self.width as usize - 2).underlined()),
+            cursor::MoveTo(1, self.height - 1),
+            PrintStyledContent(s.bold().underlined()),
             cursor::RestorePosition,
         )?;
         self.flush()
