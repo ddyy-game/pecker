@@ -47,20 +47,19 @@ impl Pecker {
 
                     if event.code == KeyCode::Backspace {
                         // step 1. update text lines
-                        // record current char
-                        let current_char = self.text_lines.current() as char;
                         // move backward
                         let (expect, redraw) = self.text_lines.backward();
 
                         // step 2. update screen
-                        // reset style for current char
-                        self.screen.set_char(current_char.blank())?;
-                        // actually move the cursor on screen
+                        // move the cursor on screen
                         if redraw {
                             self.text_lines.redraw(&mut self.screen)?;
                         } else {
                             self.text_lines.move_to_cursor(&mut self.screen)?;
                         }
+                        // reset style for current char
+                        let current_char = self.text_lines.current() as char;
+                        self.screen.set_char(current_char.blank())?;
 
                         // step 3. inspect next char
                         self.screen.debug(&format!("expect: {expect:?}"))?;
