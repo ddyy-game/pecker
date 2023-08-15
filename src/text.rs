@@ -175,22 +175,22 @@ impl TextLines {
             if n_hit > 0 {
                 if line.len() <= n_hit {
                     n_hit -= line.len();
-                    screen.put_str(line.hit())?;
+                    screen.put(line.hit())?;
                     continue;
                 }
-                screen.put_str(line[..n_hit].hit())?;
+                screen.put(line[..n_hit].hit())?;
             }
             if n_hit < line.len() && n_miss > 0 {
                 if line.len() - n_hit <= n_miss {
-                    screen.put_str(line[n_hit..].miss())?;
+                    screen.put(line[n_hit..].miss())?;
                     n_miss -= line.len() - n_hit;
                     n_hit = 0;
                     continue;
                 }
-                screen.put_str(line[n_hit..n_hit + n_miss].miss())?;
+                screen.put(line[n_hit..n_hit + n_miss].miss())?;
             }
             if n_miss + n_hit < line.len() {
-                screen.put_str(line[n_hit + n_miss..].blank())?;
+                screen.put(line[n_hit + n_miss..].blank())?;
                 n_hit = 0;
                 n_miss = 0;
             }

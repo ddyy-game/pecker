@@ -1,5 +1,7 @@
 use std::io::Result;
 
+use crate::layout::Layout;
+
 use crossterm::{
     event::{read, Event, KeyCode, KeyModifiers},
     terminal::enable_raw_mode,
@@ -13,6 +15,7 @@ use crate::{
 pub struct Pecker {
     screen: MainScreen,
     text_lines: TextLines,
+    layout: Layout,
 }
 
 impl Pecker {
@@ -20,7 +23,12 @@ impl Pecker {
     pub fn new() -> Self {
         let screen = MainScreen::new();
         let text_lines = TextLines::new();
-        Self { screen, text_lines }
+        let layout = Layout::new();
+        Self {
+            screen,
+            text_lines,
+            layout,
+        }
     }
 
     pub fn reset(&mut self) -> Result<()> {
@@ -31,7 +39,7 @@ impl Pecker {
             !self.text_lines.align_center,
         );
         self.text_lines.redraw(&mut self.screen)?;
-        self.screen.debug(&format!("expect: {expect:?}"))?;
+        self.layout.redraw(&mut self.screen, expect)?;
         Ok(())
     }
 
@@ -59,10 +67,11 @@ impl Pecker {
                         }
                         // reset style for current char
                         let current_char = self.text_lines.current() as char;
-                        self.screen.set_char(current_char.blank())?;
+                        self.screen.set(current_char.blank())?;
 
                         // step 3. inspect next char
-                        self.screen.debug(&format!("expect: {expect:?}"))?;
+                        self.layout.redraw(&mut self.screen, expect)?;
+
                         continue;
                     }
 
@@ -83,10 +92,10 @@ impl Pecker {
                         // set style for current char
                         match state {
                             State::Hit | State::End => {
-                                self.screen.set_char(current_char.hit())?;
+                                self.screen.set(current_char.hit())?;
                             }
                             State::Miss => {
-                                self.screen.set_char(current_char.miss())?;
+                                self.screen.set(current_char.miss())?;
                             }
                         };
                         // actually move the cursor on screen
@@ -98,6 +107,7 @@ impl Pecker {
 
                         // step 3. inspect next char
                         self.screen.debug(&format!("expect: {expect:?}"))?;
+                        self.layout.redraw(&mut self.screen, expect)?;
 
                         if matches!(state, State::End) {
                             self.reset()?;

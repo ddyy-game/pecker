@@ -37,12 +37,20 @@ impl MainScreen {
         queue!(self.stdout, cursor::MoveTo(column, row))
     }
 
-    pub fn put_str(&mut self, s: StyledContent<String>) -> Result<()> {
+    pub fn set(&mut self, c: StyledContent<char>) -> Result<()> {
+        queue!(self.stdout, PrintStyledContent(c), cursor::MoveLeft(1))
+    }
+
+    pub fn put(&mut self, s: StyledContent<String>) -> Result<()> {
         queue!(self.stdout, PrintStyledContent(s))
     }
 
-    pub fn set_char(&mut self, c: StyledContent<char>) -> Result<()> {
-        queue!(self.stdout, PrintStyledContent(c), cursor::MoveLeft(1))
+    pub fn save(&mut self) -> Result<()> {
+        queue!(self.stdout, cursor::SavePosition)
+    }
+
+    pub fn load(&mut self) -> Result<()> {
+        queue!(self.stdout, cursor::RestorePosition)
     }
 
     pub fn debug(&mut self, s: &str) -> Result<()> {
