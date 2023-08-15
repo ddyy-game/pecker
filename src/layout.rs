@@ -1,6 +1,9 @@
 use std::{collections::HashMap, io::Result};
 
-use crate::{screen::MainScreen, text::Expect};
+use crate::{
+    screen::{MainScreen, Styled},
+    text::Expect,
+};
 
 #[derive(Debug)]
 pub enum Finger {
@@ -59,17 +62,35 @@ impl Layout {
     }
 
     pub fn redraw(&self, screen: &mut MainScreen, c: Expect) -> Result<()> {
+        screen.debug(&format!("{c:?}"))?;
         screen.save()?;
-        match c {
-            Expect::Char(c) => {
-                screen.debug(&format!("{:?}", self.keyboard_pos.get(&c)))?;
-            }
-            Expect::Softbreak => {
-                screen.debug(&format!("{:?}", self.keyboard_pos.get(&' ')))?;
-            }
-            Expect::Backspace => {
-                screen.debug(&format!("{:?}", self.keyboard_pos.get(&'\x08')))?;
-            }
+        screen.move_to(screen.width / 2 - 4, screen.height - 8)?;
+        for _ in 0..4 {
+            screen.move_by(-6, 0)?;
+            screen.set('⌒'.default())?;
+            screen.move_by(-1, 1)?;
+            screen.set('|'.default())?;
+            screen.move_by(2, 0)?;
+            screen.set('|'.default())?;
+            screen.move_by(-2, 1)?;
+            screen.set('|'.default())?;
+            screen.move_by(2, 0)?;
+            screen.set('|'.default())?;
+            screen.move_by(0, -2)?;
+        }
+        screen.move_to(screen.width / 2 + 2, screen.height - 8)?;
+        for _ in 0..4 {
+            screen.move_by(4, 0)?;
+            screen.set('⌒'.default())?;
+            screen.move_by(-1, 1)?;
+            screen.set('|'.default())?;
+            screen.move_by(2, 0)?;
+            screen.set('|'.default())?;
+            screen.move_by(-2, 1)?;
+            screen.set('|'.default())?;
+            screen.move_by(2, 0)?;
+            screen.set('|'.default())?;
+            screen.move_by(0, -2)?;
         }
         screen.load()?;
         screen.flush()?;

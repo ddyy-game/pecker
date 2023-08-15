@@ -106,7 +106,6 @@ impl Pecker {
                         }
 
                         // step 3. inspect next char
-                        self.screen.debug(&format!("expect: {expect:?}"))?;
                         self.layout.redraw(&mut self.screen, expect)?;
 
                         if matches!(state, State::End) {
