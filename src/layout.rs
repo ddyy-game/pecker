@@ -58,11 +58,16 @@ impl Layout {
         let (col, row, shift) = *self
             .keyboard_pos
             .get(&match c {
-                Expect::Char(c) => c,
+                Expect::Char(c, _) => c,
                 Expect::Softbreak => ' ',
-                Expect::Backspace => '\x08',
+                Expect::Backspace(_) => '\x08',
             })
             .unwrap_or(&(0i16, -1i16, false));
+        let repeat = match c {
+            Expect::Char(_, repeat) => repeat,
+            Expect::Backspace(repeat) => repeat,
+            _ => 1,
+        };
 
         // left hand
         screen.move_to(screen.width / 2 - 4, screen.height - 7)?;
@@ -73,11 +78,11 @@ impl Layout {
             } else {
                 (-col.min(-2).max(-5) == i + 2, 4 - row as u16, col + i + 2)
             };
-            self.draw_finger(screen, len, dir, highlight)?;
+            self.draw_finger(screen, len, dir, highlight, repeat)?;
         }
 
         // right hand
-        screen.move_to(screen.width / 2 + 1, screen.height - 7)?;
+        screen.move_to(screen.width / 2 + 2, screen.height - 7)?;
         for i in 0..4 {
             screen.move_by(5, 0)?;
             let (highlight, len, dir) = if col <= 0 {
@@ -85,13 +90,24 @@ impl Layout {
             } else {
                 (col.max(2).min(5) == i + 2, 4 - row as u16, col - i - 2)
             };
-            self.draw_finger(screen, len, dir, highlight)?;
+            self.draw_finger(screen, len, dir, highlight, repeat)?;
         }
 
         // thumb
         if col == 0 && row == 0 {
             screen.move_to(screen.width / 2 - 2, screen.height - 5)?;
-            screen.put("====".bold().green())?;
+            screen.put(
+                format!(
+                    "=={}==",
+                    if repeat > 1 {
+                        repeat.to_string()
+                    } else {
+                        "=".to_string()
+                    }
+                )
+                .bold()
+                .green(),
+            )?;
         }
 
         screen.load()?;
@@ -104,8 +120,8 @@ impl Layout {
             screen.move_to(0, screen.height - 7 - i)?;
             screen.put(" ".repeat(screen.width as usize).reset())?;
         }
-        screen.move_to(screen.width / 2 - 2, screen.height - 5)?;
-        screen.put("    ".reset())?;
+        screen.move_to(0, screen.height - 5)?;
+        screen.put(" ".repeat(screen.width as usize).reset())?;
         Ok(())
     }
 
@@ -115,6 +131,7 @@ impl Layout {
         len: u16,
         direction: i16,
         highlight: bool,
+        repeat: usize,
     ) -> Result<()> {
         let tip = if highlight {
             " ⌒ ".bold().green()
@@ -138,7 +155,14 @@ impl Layout {
             screen.move_by(-3 + direction, -1)?;
         }
         screen.put(tip)?;
-        screen.move_by(-3 - len as i16 * direction - offset, len as i16)?;
+        screen.move_by(-2, 0)?;
+        if highlight && repeat > 1 {
+            let repeat_str = repeat.to_string();
+            let len = repeat_str.len();
+            screen.put(repeat_str.bold().green())?;
+            screen.move_by(-(len as i16), 0)?;
+        }
+        screen.move_by(-1 - len as i16 * direction - offset, len as i16)?;
         Ok(())
     }
 }

@@ -20,9 +20,9 @@ pub enum State {
 
 #[derive(Debug)]
 pub enum Expect {
-    Char(char),
+    Char(char, usize),
     Softbreak,
-    Backspace,
+    Backspace(usize),
 }
 
 impl TextLines {
@@ -54,9 +54,9 @@ impl TextLines {
         self.align_center = align_center;
 
         if self.n_miss == 0 {
-            Expect::Char(self.current() as char)
+            Expect::Char(self.current() as char, self.count_repeat())
         } else {
-            Expect::Backspace
+            Expect::Backspace(self.n_miss)
         }
     }
 
@@ -64,6 +64,15 @@ impl TextLines {
     #[must_use]
     pub fn current(&self) -> u8 {
         self.raw_text[self.n_hit + self.n_miss]
+    }
+
+    #[must_use]
+    pub fn count_repeat(&self) -> usize {
+        let mut cnt = 1;
+        while self.raw_text[self.n_hit + self.n_miss + cnt] == self.current() {
+            cnt += 1;
+        }
+        cnt
     }
 
     #[inline]
@@ -109,11 +118,11 @@ impl TextLines {
             State::Hit
         };
         let expect = if self.n_miss != 0 {
-            Expect::Backspace
+            Expect::Backspace(self.n_miss)
         } else if self.is_softbreak() {
             Expect::Softbreak
         } else {
-            Expect::Char(self.current() as char)
+            Expect::Char(self.current() as char, self.count_repeat())
         };
         let redraw = self.cursor_pos.0 == 0;
 
@@ -133,11 +142,14 @@ impl TextLines {
         }
 
         if self.n_miss != 0 {
-            (Expect::Backspace, false)
+            (Expect::Backspace(self.n_miss), false)
         } else if self.is_softbreak() {
             (Expect::Softbreak, true)
         } else {
-            (Expect::Char(self.current() as char), false)
+            (
+                Expect::Char(self.current() as char, self.count_repeat()),
+                false,
+            )
         }
     }
 
