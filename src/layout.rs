@@ -30,29 +30,29 @@ impl Layout {
             ["bvcxz", "BVCXZ", "nm,./", "NM<>?"],
         ];
         layout.keyboard_pos.insert(' ', Finger::Thumb);
-        for (i, row) in layout_str.iter().enumerate() {
-            for (j, c) in row[0].char_indices() {
+        for (j, row) in layout_str.iter().enumerate() {
+            for (i, c) in row[0].char_indices() {
                 layout
                     .keyboard_pos
                     .insert(c, Finger::Left(i as u16, j as u16));
             }
         }
-        for (i, row) in layout_str.iter().enumerate() {
-            for (j, c) in row[1].char_indices() {
+        for (j, row) in layout_str.iter().enumerate() {
+            for (i, c) in row[1].char_indices() {
                 layout
                     .keyboard_pos
                     .insert(c, Finger::ShiftLeft(i as u16, j as u16));
             }
         }
-        for (i, row) in layout_str.iter().enumerate() {
-            for (j, c) in row[2].char_indices() {
+        for (j, row) in layout_str.iter().enumerate() {
+            for (i, c) in row[2].char_indices() {
                 layout
                     .keyboard_pos
                     .insert(c, Finger::Right(i as u16, j as u16));
             }
         }
-        for (i, row) in layout_str.iter().enumerate() {
-            for (j, c) in row[3].char_indices() {
+        for (j, row) in layout_str.iter().enumerate() {
+            for (i, c) in row[3].char_indices() {
                 layout
                     .keyboard_pos
                     .insert(c, Finger::ShiftRight(i as u16, j as u16));
@@ -65,31 +65,92 @@ impl Layout {
         screen.debug(&format!("{c:?}"))?;
         screen.save()?;
         screen.move_to(screen.width / 2 - 4, screen.height - 8)?;
-        for _ in 0..4 {
+        let finger = self.keyboard_pos.get(&match c {
+            Expect::Char(c) => c,
+            Expect::Softbreak => ' ',
+            Expect::Backspace => '\x08',
+        });
+        for i in 0..4 {
+            let column = if let Some(Finger::Left(column, _)) = finger {
+                Some(if *column > 4 { 4 } else { *column })
+            } else if let Some(Finger::ShiftLeft(column, _)) = finger {
+                Some(if *column > 4 { 4 } else { *column })
+            } else {
+                None
+            };
+            let i = if column == Some(0) { i } else { i + 1 };
             screen.move_by(-6, 0)?;
-            screen.set('⌒'.default())?;
+            screen.set(if column == Some(i) {
+                '⌒'.hit()
+            } else {
+                '⌒'.default()
+            })?;
             screen.move_by(-1, 1)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(2, 0)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(-2, 1)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(2, 0)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(0, -2)?;
         }
         screen.move_to(screen.width / 2 + 2, screen.height - 8)?;
-        for _ in 0..4 {
+        for i in 0..4 {
+            let column = if let Some(Finger::Right(column, _)) = finger {
+                Some(if *column > 4 { 4 } else { *column })
+            } else if let Some(Finger::ShiftRight(column, _)) = finger {
+                Some(if *column > 4 { 4 } else { *column })
+            } else {
+                None
+            };
+            let i = if column == Some(0) { i } else { i + 1 };
             screen.move_by(4, 0)?;
-            screen.set('⌒'.default())?;
+            screen.set(if column == Some(i) {
+                '⌒'.hit()
+            } else {
+                '⌒'.default()
+            })?;
             screen.move_by(-1, 1)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(2, 0)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(-2, 1)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(2, 0)?;
-            screen.set('|'.default())?;
+            screen.set(if column == Some(i) {
+                '|'.hit()
+            } else {
+                '|'.default()
+            })?;
             screen.move_by(0, -2)?;
         }
         screen.load()?;
