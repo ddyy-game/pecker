@@ -52,7 +52,6 @@ impl Layout {
     }
 
     pub fn redraw(&self, screen: &mut MainScreen, c: Expect) -> Result<()> {
-        screen.debug(&format!("{c:?}"))?;
         screen.save()?;
         self.clear(screen)?;
 
@@ -66,7 +65,7 @@ impl Layout {
             .unwrap_or(&(0i16, -1i16, false));
 
         // left hand
-        screen.move_to(screen.width / 2 - 4, screen.height - 8)?;
+        screen.move_to(screen.width / 2 - 4, screen.height - 7)?;
         for i in 0..4 {
             screen.move_by(-5, 0)?;
             let (highlight, len, dir) = if col >= 0 {
@@ -78,7 +77,7 @@ impl Layout {
         }
 
         // right hand
-        screen.move_to(screen.width / 2 + 1, screen.height - 8)?;
+        screen.move_to(screen.width / 2 + 1, screen.height - 7)?;
         for i in 0..4 {
             screen.move_by(5, 0)?;
             let (highlight, len, dir) = if col <= 0 {
@@ -91,7 +90,7 @@ impl Layout {
 
         // thumb
         if col == 0 && row == 0 {
-            screen.move_to(screen.width / 2 - 2, screen.height - 6)?;
+            screen.move_to(screen.width / 2 - 2, screen.height - 5)?;
             screen.put("====".bold().green())?;
         }
 
@@ -102,10 +101,10 @@ impl Layout {
 
     fn clear(&self, screen: &mut MainScreen) -> Result<()> {
         for i in 0..5 {
-            screen.move_to(0, screen.height - 8 - i)?;
+            screen.move_to(0, screen.height - 7 - i)?;
             screen.put(" ".repeat(screen.width as usize).reset())?;
         }
-        screen.move_to(screen.width / 2 - 2, screen.height - 6)?;
+        screen.move_to(screen.width / 2 - 2, screen.height - 5)?;
         screen.put("    ".reset())?;
         Ok(())
     }

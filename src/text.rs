@@ -53,7 +53,11 @@ impl TextLines {
         self.cursor_pos = pos;
         self.align_center = align_center;
 
-        Expect::Char(self.current() as char)
+        if self.n_miss == 0 {
+            Expect::Char(self.current() as char)
+        } else {
+            Expect::Backspace
+        }
     }
 
     #[inline]

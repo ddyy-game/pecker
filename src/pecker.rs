@@ -115,9 +115,11 @@ impl Pecker {
                 }
                 Event::Resize(width, height) => {
                     self.screen.set_size(width, height);
-                    self.text_lines
+                    let expect = self
+                        .text_lines
                         .reset(None, width, self.text_lines.align_center);
                     self.text_lines.redraw(&mut self.screen)?;
+                    self.layout.redraw(&mut self.screen, expect)?;
                 }
                 Event::FocusGained | Event::FocusLost | Event::Mouse(_) => (),
             }
