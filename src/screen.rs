@@ -55,7 +55,7 @@ impl MainScreen {
         queue!(self.stdout, PrintStyledContent(c), cursor::MoveLeft(1))
     }
 
-    pub fn put(&mut self, s: StyledContent<String>) -> Result<()> {
+    pub fn put<D: std::fmt::Display>(&mut self, s: StyledContent<D>) -> Result<()> {
         queue!(self.stdout, PrintStyledContent(s))
     }
 

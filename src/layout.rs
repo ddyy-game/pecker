@@ -1,22 +1,12 @@
-use std::{collections::HashMap, io::Result};
+use std::{cmp::Ordering, collections::HashMap, io::Result};
 
-use crate::{
-    screen::{MainScreen, Styled},
-    text::Expect,
-};
+use crossterm::style::Stylize;
 
-#[derive(Debug)]
-pub enum Finger {
-    Left(u16, u16),
-    ShiftLeft(u16, u16),
-    Right(u16, u16),
-    ShiftRight(u16, u16),
-    Thumb,
-}
+use crate::{screen::MainScreen, text::Expect};
 
 #[derive(Default)]
 pub struct Layout {
-    keyboard_pos: HashMap<char, Finger>,
+    keyboard_pos: HashMap<char, (i16, i16, bool)>,
 }
 
 impl Layout {
@@ -29,33 +19,33 @@ impl Layout {
             ["gfdsa", "GFDSA", "hjkl;'\n", "HJKL:\""],
             ["bvcxz", "BVCXZ", "nm,./", "NM<>?"],
         ];
-        layout.keyboard_pos.insert(' ', Finger::Thumb);
+        layout.keyboard_pos.insert(' ', (0, 0, false));
         for (j, row) in layout_str.iter().enumerate() {
             for (i, c) in row[0].char_indices() {
                 layout
                     .keyboard_pos
-                    .insert(c, Finger::Left(i as u16, j as u16));
+                    .insert(c, (-(i as i16 + 1), j as i16, false));
             }
         }
         for (j, row) in layout_str.iter().enumerate() {
             for (i, c) in row[1].char_indices() {
                 layout
                     .keyboard_pos
-                    .insert(c, Finger::ShiftLeft(i as u16, j as u16));
+                    .insert(c, (-(i as i16 + 1), j as i16, true));
             }
         }
         for (j, row) in layout_str.iter().enumerate() {
             for (i, c) in row[2].char_indices() {
                 layout
                     .keyboard_pos
-                    .insert(c, Finger::Right(i as u16, j as u16));
+                    .insert(c, (i as i16 + 1, j as i16, false));
             }
         }
         for (j, row) in layout_str.iter().enumerate() {
             for (i, c) in row[3].char_indices() {
                 layout
                     .keyboard_pos
-                    .insert(c, Finger::ShiftRight(i as u16, j as u16));
+                    .insert(c, (i as i16 + 1, j as i16, true));
             }
         }
         layout
@@ -64,97 +54,92 @@ impl Layout {
     pub fn redraw(&self, screen: &mut MainScreen, c: Expect) -> Result<()> {
         screen.debug(&format!("{c:?}"))?;
         screen.save()?;
+        self.clear(screen)?;
+
+        let (col, row, shift) = *self
+            .keyboard_pos
+            .get(&match c {
+                Expect::Char(c) => c,
+                Expect::Softbreak => ' ',
+                Expect::Backspace => '\x08',
+            })
+            .unwrap_or(&(0i16, -1i16, false));
+
+        // left hand
         screen.move_to(screen.width / 2 - 4, screen.height - 8)?;
-        let finger = self.keyboard_pos.get(&match c {
-            Expect::Char(c) => c,
-            Expect::Softbreak => ' ',
-            Expect::Backspace => '\x08',
-        });
         for i in 0..4 {
-            let column = if let Some(Finger::Left(column, _)) = finger {
-                Some(if *column > 4 { 4 } else { *column })
-            } else if let Some(Finger::ShiftLeft(column, _)) = finger {
-                Some(if *column > 4 { 4 } else { *column })
+            screen.move_by(-5, 0)?;
+            let (highlight, len, dir) = if col >= 0 {
+                (shift && i == 3, 1, -1)
             } else {
-                None
+                (-col.min(-2).max(-5) == i + 2, 4 - row as u16, col + i + 2)
             };
-            let i = if column == Some(0) { i } else { i + 1 };
-            screen.move_by(-6, 0)?;
-            screen.set(if column == Some(i) {
-                '⌒'.hit()
-            } else {
-                '⌒'.default()
-            })?;
-            screen.move_by(-1, 1)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(2, 0)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(-2, 1)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(2, 0)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(0, -2)?;
+            self.draw_finger(screen, len, dir, highlight)?;
         }
-        screen.move_to(screen.width / 2 + 2, screen.height - 8)?;
+
+        // right hand
+        screen.move_to(screen.width / 2 + 1, screen.height - 8)?;
         for i in 0..4 {
-            let column = if let Some(Finger::Right(column, _)) = finger {
-                Some(if *column > 4 { 4 } else { *column })
-            } else if let Some(Finger::ShiftRight(column, _)) = finger {
-                Some(if *column > 4 { 4 } else { *column })
+            screen.move_by(5, 0)?;
+            let (highlight, len, dir) = if col <= 0 {
+                (shift && i == 3, 1, 1)
             } else {
-                None
+                (col.max(2).min(5) == i + 2, 4 - row as u16, col - i - 2)
             };
-            let i = if column == Some(0) { i } else { i + 1 };
-            screen.move_by(4, 0)?;
-            screen.set(if column == Some(i) {
-                '⌒'.hit()
-            } else {
-                '⌒'.default()
-            })?;
-            screen.move_by(-1, 1)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(2, 0)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(-2, 1)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(2, 0)?;
-            screen.set(if column == Some(i) {
-                '|'.hit()
-            } else {
-                '|'.default()
-            })?;
-            screen.move_by(0, -2)?;
+            self.draw_finger(screen, len, dir, highlight)?;
         }
+
+        // thumb
+        if col == 0 && row == 0 {
+            screen.move_to(screen.width / 2 - 2, screen.height - 6)?;
+            screen.put("====".bold().green())?;
+        }
+
         screen.load()?;
         screen.flush()?;
+        Ok(())
+    }
+
+    fn clear(&self, screen: &mut MainScreen) -> Result<()> {
+        for i in 0..5 {
+            screen.move_to(0, screen.height - 8 - i)?;
+            screen.put(" ".repeat(screen.width as usize).reset())?;
+        }
+        screen.move_to(screen.width / 2 - 2, screen.height - 6)?;
+        screen.put("    ".reset())?;
+        Ok(())
+    }
+
+    fn draw_finger(
+        &self,
+        screen: &mut MainScreen,
+        len: u16,
+        direction: i16,
+        highlight: bool,
+    ) -> Result<()> {
+        let tip = if highlight {
+            " ⌒ ".bold().green()
+        } else {
+            " ⌒ ".reset()
+        };
+        let (side_str, direction, offset) = match (highlight, direction.cmp(&0)) {
+            (false, _) | (true, Ordering::Equal) => ("| |", 0, 0),
+            (true, Ordering::Less) => ("\\ \\", -1, (direction + 1) * 2),
+            (true, Ordering::Greater) => ("/ /", 1, (direction - 1) * 2),
+        };
+        let side = if highlight {
+            side_str.bold().green()
+        } else {
+            side_str.reset()
+        };
+        let len = if highlight { len } else { 2 };
+        screen.move_by(offset, 0)?;
+        for _ in 0..len {
+            screen.put(side)?;
+            screen.move_by(-3 + direction, -1)?;
+        }
+        screen.put(tip)?;
+        screen.move_by(-3 - len as i16 * direction - offset, len as i16)?;
         Ok(())
     }
 }
