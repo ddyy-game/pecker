@@ -31,13 +31,11 @@ impl Pecker {
         }
     }
 
-    pub fn reset(&mut self) -> Result<()> {
+    pub fn reset(&mut self, text: &str, align_center: bool) -> Result<()> {
         enable_raw_mode()?;
-        let expect = self.text_lines.reset(
-            Some("Hello, world!\n\nThis is example text from pecker."),
-            self.screen.width,
-            !self.text_lines.align_center,
-        );
+        let expect = self
+            .text_lines
+            .reset(Some(text), self.screen.width, align_center);
         self.text_lines.redraw(&mut self.screen)?;
         self.layout.redraw(&mut self.screen, expect)?;
         Ok(())
@@ -109,7 +107,8 @@ impl Pecker {
                         self.layout.redraw(&mut self.screen, expect)?;
 
                         if matches!(state, State::End) {
-                            self.reset()?;
+                            self.screen.clear()?;
+                            break;
                         }
                     }
                 }

@@ -104,6 +104,11 @@ impl TextLines {
             if self.at_line_end() {
                 self.cursor_pos.1 += 1;
                 self.cursor_pos.0 = 0;
+                // skip leading spaces
+                while self.n_miss == 0 && self.current() == b' ' {
+                    self.cursor_pos.0 += 1;
+                    self.n_hit += 1;
+                }
             } else {
                 self.cursor_pos.0 += 1;
             }
