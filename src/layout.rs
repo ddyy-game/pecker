@@ -63,10 +63,10 @@ impl Layout {
                 Expect::Backspace(_) => '\x08',
             })
             .unwrap_or(&(0i16, -1i16, false));
-        let repeat = match c {
-            Expect::Char(_, repeat) => repeat,
-            Expect::Backspace(repeat) => repeat,
-            _ => 1,
+        let (hit, repeat) = match c {
+            Expect::Char(_, repeat) => (true, repeat),
+            Expect::Softbreak => (true, 1),
+            Expect::Backspace(repeat) => (false, repeat),
         };
 
         // left hand
@@ -78,7 +78,7 @@ impl Layout {
             } else {
                 (-col.min(-2).max(-5) == i + 2, 4 - row as u16, col + i + 2)
             };
-            self.draw_finger(screen, len, dir, highlight, repeat)?;
+            self.draw_finger(screen, len, dir, highlight, hit, repeat)?;
         }
 
         // right hand
@@ -90,7 +90,7 @@ impl Layout {
             } else {
                 (col.max(2).min(5) == i + 2, 4 - row as u16, col - i - 2)
             };
-            self.draw_finger(screen, len, dir, highlight, repeat)?;
+            self.draw_finger(screen, len, dir, highlight, hit, repeat)?;
         }
 
         // thumb
@@ -130,25 +130,23 @@ impl Layout {
         screen: &mut MainScreen,
         len: u16,
         direction: i16,
-        highlight: bool,
+        current: bool,
+        hit: bool,
         repeat: usize,
     ) -> Result<()> {
-        let tip = if highlight {
-            " ⌒ ".bold().green()
-        } else {
-            " ⌒ ".reset()
-        };
-        let (side_str, direction, offset) = match (highlight, direction.cmp(&0)) {
+        let (side_str, direction, offset) = match (current, direction.cmp(&0)) {
             (false, _) | (true, Ordering::Equal) => ("| |", 0, 0),
             (true, Ordering::Less) => ("\\ \\", -1, (direction + 1) * 2),
             (true, Ordering::Greater) => ("/ /", 1, (direction - 1) * 2),
         };
-        let side = if highlight {
-            side_str.bold().green()
+        let (tip, side) = if current && hit {
+            (" ⌒ ".bold().green(), side_str.bold().green())
+        } else if current {
+            (" ⌒ ".bold().red(), side_str.bold().red())
         } else {
-            side_str.reset()
+            (" ⌒ ".reset(), side_str.reset())
         };
-        let len = if highlight { len } else { 2 };
+        let len = if current { len } else { 2 };
         screen.move_by(offset, 0)?;
         for _ in 0..len {
             screen.put(side)?;
@@ -156,10 +154,14 @@ impl Layout {
         }
         screen.put(tip)?;
         screen.move_by(-2, 0)?;
-        if highlight && repeat > 1 {
+        if current && repeat > 1 {
             let repeat_str = repeat.to_string();
             let len = repeat_str.len();
-            screen.put(repeat_str.bold().green())?;
+            if hit {
+                screen.put(repeat_str.bold().green())?;
+            } else {
+                screen.put(repeat_str.bold().red())?;
+            };
             screen.move_by(-(len as i16), 0)?;
         }
         screen.move_by(-1 - len as i16 * direction - offset, len as i16)?;
