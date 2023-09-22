@@ -38,15 +38,15 @@ impl MainScreen {
     }
 
     pub fn move_by(&mut self, column: i16, row: i16) -> Result<()> {
-        if column > 0 {
-            queue!(self.stdout, cursor::MoveRight(column as u16))?;
-        } else if column < 0 {
-            queue!(self.stdout, cursor::MoveLeft(-column as u16))?;
+        match column {
+            1.. => queue!(self.stdout, cursor::MoveRight(column as u16))?,
+            ..=-1 => queue!(self.stdout, cursor::MoveLeft(-column as u16))?,
+            _ => {}
         };
-        if row > 0 {
-            queue!(self.stdout, cursor::MoveDown(row as u16))?;
-        } else if row < 0 {
-            queue!(self.stdout, cursor::MoveUp(-row as u16))?;
+        match row {
+            1.. => queue!(self.stdout, cursor::MoveDown(row as u16))?,
+            ..=-1 => queue!(self.stdout, cursor::MoveUp(-row as u16))?,
+            _ => {}
         };
         Ok(())
     }
