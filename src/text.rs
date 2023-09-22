@@ -41,7 +41,7 @@ impl TextLines {
         }
 
         let text_width =
-            (width - 8).min(((self.raw_text.len() as f32).sqrt().ceil() + 15.0) as u16);
+            (width - 8).min(((self.raw_text.len() as f32).sqrt().ceil() + 20.0) as u16);
         self.lines = wrap_string(&self.raw_text, text_width);
         let mut n = self.n_hit + self.n_miss;
         let mut pos = (0u16, 0u16);
